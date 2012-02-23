@@ -2,11 +2,11 @@
 # Operates on stdin and stdout only
 
 COLLAPSE_LINES='
-/^templ_lisp/ {
+/^(templ_)?lisp/ {
         printf "\n%s", $0
 }
 
-$0 !~ /^templ_lisp/ {
+$0 !~ /^(templ_)?lisp/ {
         printf "%s", $0
 }
 
@@ -14,7 +14,7 @@ END { print "" }'
 
 C_TO_LISP='
 s/lisp_symbol<((const char\*)(& lisp_symbol_text_\([A-Z_][A-Z_0-9]*\)))>/\1/g
-s/value_type<\([a-z]*\), \([0-9]*\)>/\2/g
+s/\(struct \)\?value_type<\([a-z]*\), \([0-9]*\)>/\3/g
 s/\([a-z_]*\)</(\1 /g
 s/, / /g
 s/\([ ]*\)>/)/g
