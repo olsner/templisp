@@ -13,7 +13,7 @@ $0 !~ /^templ_lisp/ {
 END { print "" }'
 
 C_TO_LISP='
-s/lisp_symbol<(&lisp_symbol_text_\([A-Z_][A-Z_0-9]*\))>/\1/g
+s/lisp_symbol<((const char\*)(& lisp_symbol_text_\([A-Z_][A-Z_0-9]*\)))>/\1/g
 s/value_type<\([a-z]*\), \([0-9]*\)>/\2/g
 s/\([a-z_]*\)</(\1 /g
 s/, / /g
