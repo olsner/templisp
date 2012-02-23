@@ -2,9 +2,6 @@
 #include "lists.h"
 #include "print.h"
 
-#include <stdio.h>
-#undef NULL
-
 typedef cons<nil, nil> empty_env;
 
 template <typename BINDING, typename ENV>
@@ -148,7 +145,7 @@ DEFINE(PROGN, "progn")
 DEFINE(IF, "if")
 //DEFINE(EQ, "eq")
 DEFINE(T, "t");
-DEFINE(NULL, "null");
+DEFINE(null, "null");
 DEFINE(CAR, "car");
 DEFINE(CDR, "cdr");
 DEFINE(PLUS, "+");
@@ -264,7 +261,7 @@ struct eval<cons<SYM(CDR), cons<ARG, nil> >, ENV>
 
 // (null ARG)
 template <typename ARG, typename ENV>
-class eval<cons<SYM(NULL), ARG>, ENV>
+class eval<cons<SYM(null), ARG>, ENV>
 {
 	typedef typename eval<typename ARG::car, ENV>::value arg;
 public:
@@ -422,6 +419,8 @@ public:
 
 typedef add_binding<cons<PLUS, PLUS>, empty_env>::value initial_env;
 
+#include <stdio.h>
+
 int main()
 {
 	// (cons 3 (quote 5 cons 2))
@@ -456,7 +455,7 @@ int main()
 	typedef LIST3(SYM(SET), SYM(APPEND),
 			LIST3(SYM(LAMBDA), LIST2(SYM(A), SYM(B)),
 				LIST4(SYM(IF),
-					LIST2(SYM(NULL), SYM(A)),
+					LIST2(SYM(null), SYM(A)),
 					SYM(B),
 					LIST3(SYM(CONS),
 						LIST2(SYM(CAR), SYM(A)),
@@ -478,7 +477,7 @@ int main()
 	typedef LIST3(SYM(C), INT(1), LIST2(SYM(QUOTE), LIST2(INT(7), INT(8)))) run_c;
 	//typedef LIST4(SYM(PROGN), set_c_lambda, set_a, run_c) prog;
 	//typedef LIST3(SYM(PROGN), set_append, use_append) prog;
-	//typedef CALL2(PROGN, CALL2(SET, SYM(A), nil), CALL1(NULL, SYM(A))) prog;
+	//typedef CALL2(PROGN, CALL2(SET, SYM(A), nil), CALL1(null, SYM(A))) prog;
 	
 	typedef set_append prog;
 	//typedef use_append prog2;
