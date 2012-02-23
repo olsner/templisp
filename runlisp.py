@@ -64,7 +64,10 @@ def gcc(out, prog):
 	return 'g++ -o %s "-DPROG=%s" -ftemplate-depth-30 -Wall -g templ_lisp.cpp 2>&1 | ./filter.sh' % (out, prog)
 
 args = sys.argv[1:]
-if args[0] == '--clang':
+if not args:
+	print >>sys.stderr, "Usage: %s [--clang|--gcc] LISP..." % sys.argv[0]
+	sys.exit(1)
+elif args[0] == '--clang':
 	args = args[1:]
 	compiler = clang
 else:
