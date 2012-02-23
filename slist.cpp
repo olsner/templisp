@@ -1,5 +1,4 @@
-//#include <stdio.h>
-int printf(const char *fmt, ...);
+extern "C" int printf(const char *fmt, ...);
 #include "templ_lists.h"
 
 inline const char * bool2str(bool b) { return (b)?"true":"false"; }
