@@ -1,5 +1,11 @@
 #include "lisp.h"
 #include <stdio.h>
+#define PRINT(_type) \
+	do { \
+		print<_type> printed; \
+		printf(#_type ": %s.\n", (char *)printed); \
+	} \
+	while (0)
 
 int main()
 {
@@ -70,8 +76,6 @@ int main()
 
 	typedef LIST3(PLUS, INT(7), INT(3)) plus_7_3;
 	typedef eval<plus_7_3, initial_env> plus_7_3_res;
-
-	#define PRINT(_type) { print<_type> printed; printf(#_type ": %s.\n", (char *)printed); }
 
 	PRINT(plus_7_3);
 	PRINT(plus_7_3_res::value);
