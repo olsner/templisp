@@ -5,7 +5,7 @@
 #include <stdio.h>
 #undef NULL
 
-typedef cons<nil, nil> initial_env;
+typedef cons<nil, nil> empty_env;
 
 template <typename BINDING, typename ENV>
 class add_binding
@@ -124,7 +124,8 @@ struct lisp_symbol
 	struct print_val<lisp_symbol<lisp_symbol_text_##_sym> > \
 	{ \
 		PRINT_STRING(lisp_symbol_text_##_sym) text; \
-	};
+	}; \
+	typedef SYM(_sym) _sym;
 
 /*
 	(CONS a b) => cons<A, B>
@@ -150,6 +151,7 @@ DEFINE(T, "t");
 DEFINE(NULL, "null");
 DEFINE(CAR, "car");
 DEFINE(CDR, "cdr");
+DEFINE(PLUS, "+");
 
 #define INT(_i) value_type<int, _i>
 
@@ -372,15 +374,31 @@ public:
 	typedef typename pop_frame<typename result::env>::value env;
 };
 
-// ((lambda LAMBDA_REST) ACTUALS)
-/*template <typename LAMBDA_REST, typename ACTUALS, typename ENV>
-class eval<cons<cons<SYM(LAMBDA), LAMBDA_REST>, ACTUALS>, ENV>
+template <typename ENV>
+class apply<PLUS, nil, ENV>
 {
-	typedef apply<cons<SYM(LAMBDA), LAMBDA_REST>, ACTUALS, ENV> result;
 public:
-	typedef typename result::value value;
-	typedef typename result::env env;
-};*/
+	typedef INT(0) value;
+	typedef ENV env;
+};
+
+template <typename ACTUALS, typename ENV>
+class apply<PLUS, ACTUALS, ENV>
+{
+	template<typename A, typename B>
+	struct plus;
+
+	template<int a, int b>
+	struct plus<INT(a), INT(b)>
+	{
+		typedef INT(a+b) value;
+	};
+	typedef eval<typename ACTUALS::car, ENV> result_head;
+	typedef apply<PLUS, typename ACTUALS::cdr, typename result_head::env> result_tail;
+public:
+	typedef typename plus<typename result_head::value, typename result_tail::value>::value value;
+	typedef ENV env;
+};
 
 // (lambda ...)
 template <typename LAMBDA_REST, typename ENV>
@@ -392,16 +410,17 @@ public:
 };
 
 // (SYM ACTUALS)
-template <typename SYM, typename ACTUALS, typename ENV>
-class eval<cons<SYM, ACTUALS>, ENV>
+template <typename FUN, typename ACTUALS, typename ENV>
+class eval<cons<FUN, ACTUALS>, ENV>
 {
-	//typedef typename get_binding<ENV, SYM>::value function_form;
-	typedef typename eval<SYM, ENV>::value function_form;
+	typedef typename eval<FUN, ENV>::value function_form;
 	typedef apply<function_form, ACTUALS, ENV> result;
 public:
 	typedef typename result::value value;
 	typedef typename result::env env;
 };
+
+typedef add_binding<cons<PLUS, PLUS>, empty_env>::value initial_env;
 
 int main()
 {
@@ -435,15 +454,15 @@ int main()
 			  		b
 				(cons (car a) (append (cdr a) b))))) */
 	typedef LIST3(SYM(SET), SYM(APPEND),
-							LIST3(SYM(LAMBDA), LIST2(SYM(A), SYM(B)),
-								LIST4(SYM(IF),
-								      LIST2(SYM(NULL), SYM(A)),
-									  SYM(B),
-								      LIST3(SYM(CONS),
-								            LIST2(SYM(CAR), SYM(A)),
-											LIST3(SYM(APPEND),
-											      LIST2(SYM(CDR), SYM(A)),
-											      SYM(B)))))) set_append;
+			LIST3(SYM(LAMBDA), LIST2(SYM(A), SYM(B)),
+				LIST4(SYM(IF),
+					LIST2(SYM(NULL), SYM(A)),
+					SYM(B),
+					LIST3(SYM(CONS),
+						LIST2(SYM(CAR), SYM(A)),
+						LIST3(SYM(CONS),
+							LIST2(SYM(CDR), SYM(A)),
+							SYM(B)))))) set_append;
 	// (append (quote (nil)) (quote (4 5 6)))
 	typedef LIST3(SYM(APPEND),
 				  LIST2(SYM(QUOTE), LIST2(INT(1), INT(2))),
@@ -469,8 +488,14 @@ int main()
 	typedef eval<prog, initial_env> eval_result1;
 	typedef eval<prog2, eval_result1::env> eval_result;
 	typedef eval_result::value value;
-	
+
+	typedef LIST3(PLUS, INT(7), INT(3)) plus_7_3;
+	typedef eval<plus_7_3, initial_env> plus_7_3_res;
+
 	#define PRINT(_type) { print<_type> printed; printf(#_type ": %s.\n", (char *)printed); }
+
+	PRINT(plus_7_3);
+	PRINT(plus_7_3_res::value);
 	
 	PRINT(prog);
 	//PRINT(prog2);
