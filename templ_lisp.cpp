@@ -280,16 +280,12 @@ struct eval<cons<SYM(QUOTE), cons<REST, nil> >, ENV>
 };
 
 // (if TEST TRUE_CLAUSE FALSE_CLAUSE)
-template <typename TEST, typename TRUE_CLAUSE, typename FALSE_CLAUSE,
-	typename REST, typename ENV>
-struct eval<cons<SYM(IF),
-				 cons<TEST,
-				      cons<TRUE_CLAUSE, cons<FALSE_CLAUSE, REST> > > >, ENV>
+template <typename TEST, typename T, typename F, typename ENV>
+struct eval<cons<SYM(IF), cons<TEST, cons<T, cons<F, nil> > > >, ENV>
 {
 	typedef typename select_type<
 		same_type<typename eval<TEST, ENV>::value, nil>::value,
-		eval<FALSE_CLAUSE, ENV>,
-		eval<TRUE_CLAUSE, ENV> >::type result_eval;
+		eval<F, ENV>, eval<T, ENV> >::type result_eval;
 	typedef typename result_eval::value value;
 	typedef typename result_eval::env env;
 };
