@@ -12,8 +12,8 @@ int main()
 #ifdef PROG
 	typedef PROG prog;
 	typedef eval<prog, initial_env> eval_result;
-	PRINT(eval_result::value);
-	PRINT(eval_result::env);
+	print<eval_result::value> printed;
+	puts((char*)printed);
 #else
 	// (cons 3 (quote 5 cons 2))
 /*	typedef LIST3(CONS,
