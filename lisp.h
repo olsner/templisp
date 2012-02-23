@@ -256,13 +256,12 @@ struct eval<cons<CDR, cons<ARG, nil> >, ENV>
 
 // (null ARG)
 template <typename ARG, typename ENV>
-class eval<cons<null, ARG>, ENV>
+class eval<cons<null, cons<ARG, nil> >, ENV>
 {
-	typedef typename eval<typename ARG::car, ENV>::value arg;
+	typedef typename eval<ARG, ENV>::value arg;
 public:
-	typedef select_type<same_type<arg, nil>::value,
-						T,
-						nil> value;
+	static const bool val = same_type<arg, nil>::value;
+	typedef typename select_type<val, T, nil>::type value;
 	typedef ENV env;
 };
 
