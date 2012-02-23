@@ -1,16 +1,25 @@
 #!/bin/bash
+# vim:et:
 # Operates on stdin and stdout only
 
 COLLAPSE_LINES='
-/^(templ_)?lisp/ {
-        printf "\n%s", $0
+BEGIN {
+    out=0
 }
 
-$0 !~ /^(templ_)?lisp/ {
-        printf "%s", $0
+/^(templ_lisp|lisp|print|utils)/ {
+    printf "\n%s", $0
+    out=1
 }
 
-END { print "" }'
+$0 !~ /^(templ_lisp|lisp|print|utils)/ {
+    printf "%s", $0
+    out=1
+}
+
+END {
+    if (out) print ""
+}'
 
 C_TO_LISP='
 s/lisp_symbol<((const char\*)(& lisp_symbol_text_\([A-Z_][A-Z_0-9]*\)))>/\1/g
