@@ -1,0 +1,4 @@
+./runlisp.py '(cons 3 (quote cons))'
+>>>
+(3 . cons)
+>>>= 0

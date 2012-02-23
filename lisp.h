@@ -149,6 +149,7 @@ DEFINE(null, "null");
 DEFINE(CAR, "car");
 DEFINE(CDR, "cdr");
 DEFINE(PLUS, "+");
+typedef nil NIL;
 
 #define INT(_i) value_type<int, _i>
 
@@ -156,6 +157,7 @@ DEFINE(PLUS, "+");
 DEFINE(A, "a")
 DEFINE(B, "b")
 DEFINE(C, "c")
+DEFINE(D, "d")
 DEFINE(APPEND, "append")
 DEFINE(APPEND_2, "append-2")
 

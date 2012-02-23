@@ -1,0 +1,11 @@
+./runlisp.py '((lambda (a b) (cons a b)) 5 2)'
+>>>
+(5 . 2)
+>>>= 0
+
+# Eugh. Too long to tell what it's testing, except "a couple of random
+# expressions thrown together don't break completely" perhaps...
+./runlisp.py '(progn (set c (lambda (a b) (cons ((lambda (c d) (cons c d)) a b) (car b)))) (set a 12345) (c 1 (quote (7 8))))'
+>>>
+((1 7 8) . 7)
+>>>= 0

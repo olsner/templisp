@@ -1,0 +1,9 @@
+./runlisp.py '(null nil)'
+>>>
+t
+>>>= 0
+
+./runlisp.py '(null (cons nil nil))'
+>>>
+nil
+>>>= 0

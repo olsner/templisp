@@ -1,0 +1,23 @@
+./runlisp.py '(progn (set a 5) a)'
+>>>
+5
+>>>= 0
+
+./runlisp.py '(set a (set b (quote (5 2))))'
+>>>
+(5 2)
+>>>= 0
+
+# This should fail, quote takes only one argument
+./runlisp.py '(set a (set b (quote 5 2)))'
+>>>= 1
+
+./runlisp.py '(progn (set a (set b (quote (5 2)))) (cons a b))'
+>>>
+((5 2) 5 2)
+>>>= 0
+
+./runlisp.py '(progn (set a nil) (null a))'
+>>>
+t
+>>>= 0
