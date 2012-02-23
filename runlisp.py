@@ -58,7 +58,22 @@ def p(s):
 	else:
 		return special.get(s, s.upper())
 
-for a in sys.argv[1:]:
+def clang(out, prog):
+	return 'clang++ -o %s "-DPROG=%s" templ_lisp.cpp' % (out, prog)
+def gcc(out, prog):
+	return 'g++ -o %s "-DPROG=%s" -ftemplate-depth-30 -Wall -g templ_lisp.cpp 2>&1 | ./filter.sh' % (out, prog)
+
+args = sys.argv[1:]
+if args[0] == '--clang':
+	args = args[1:]
+	compiler = clang
+else:
+	if args[0] == '--gcc':
+		args = args[1:]
+	compiler = gcc
+
+for a in args:
 	s,rest = parse(a)
 	assert not len(rest), "Unconsumed input: %r" % (rest)
-	os.system('out=`mktemp`; clang++ -o $out -O3 "-DPROG=%s" templ_lisp.cpp && ($out; rm $out)' % p(s))
+	r = os.system('out=`mktemp`; (%s && $out); res=$?; rm -f $out; exit $res' % compiler('$out', p(s)))
+	if r: sys.exit(1)
