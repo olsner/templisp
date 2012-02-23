@@ -158,11 +158,6 @@ DEFINE(B, "b")
 DEFINE(C, "c")
 DEFINE(APPEND, "append")
 DEFINE(APPEND_2, "append-2")
-/*enum user_symbol
-{
-	a, b, c, d
-};
-#define USYM(_s) value_type<user_symbol, _s>*/
 
 template <typename A, typename B>
 struct list2
@@ -189,9 +184,9 @@ struct list4
 #define LIST3(...) list3<__VA_ARGS__>::value
 #define LIST4(...) list4<__VA_ARGS__>::value
 
-#define CALL1(_sym, ...) LIST2(SYM(_sym), __VA_ARGS__)
-#define CALL2(_sym, _arg1, _arg2) LIST3(SYM(_sym), _arg1, _arg2)
-#define CALL3(_sym, _arg1, _arg2, _arg3) LIST4(SYM(_sym), _arg1, _arg2, _arg3)
+#define CALL1(_sym, ...) LIST2(_sym, __VA_ARGS__)
+#define CALL2(_sym, _arg1, _arg2) LIST3(_sym, _arg1, _arg2)
+#define CALL3(_sym, _arg1, _arg2, _arg3) LIST4(_sym, _arg1, _arg2, _arg3)
 
 #define Q(_form) CALL1(QUOTE, _form)
 
@@ -234,7 +229,7 @@ struct eval<nil, ENV>
 
 // (cons REST)
 template <typename REST, typename ENV>
-class eval<cons<SYM(CONS), REST>, ENV>
+class eval<cons<CONS, REST>, ENV>
 {
 	typedef eval<FIRST(REST), ENV> fir;
 	typedef eval<SECOND(REST), typename fir::env> sec;
@@ -245,7 +240,7 @@ public:
 
 // (car ARG)
 template <typename ARG, typename ENV>
-struct eval<cons<SYM(CAR), cons<ARG, nil> >, ENV>
+struct eval<cons<CAR, cons<ARG, nil> >, ENV>
 {
 	typedef typename eval<ARG, ENV>::value::car value;
 	typedef ENV env;
@@ -253,7 +248,7 @@ struct eval<cons<SYM(CAR), cons<ARG, nil> >, ENV>
 
 // (cdr ARG)
 template <typename ARG, typename ENV>
-struct eval<cons<SYM(CDR), cons<ARG, nil> >, ENV>
+struct eval<cons<CDR, cons<ARG, nil> >, ENV>
 {
 	typedef typename eval<ARG, ENV>::value::cdr value;
 	typedef ENV env;
@@ -261,19 +256,19 @@ struct eval<cons<SYM(CDR), cons<ARG, nil> >, ENV>
 
 // (null ARG)
 template <typename ARG, typename ENV>
-class eval<cons<SYM(null), ARG>, ENV>
+class eval<cons<null, ARG>, ENV>
 {
 	typedef typename eval<typename ARG::car, ENV>::value arg;
 public:
 	typedef select_type<same_type<arg, nil>::value,
-						SYM(T),
+						T,
 						nil> value;
 	typedef ENV env;
 };
 
 // (quote REST)
 template <typename REST, typename ENV>
-struct eval<cons<SYM(QUOTE), cons<REST, nil> >, ENV>
+struct eval<cons<QUOTE, cons<REST, nil> >, ENV>
 {
 	typedef REST value;
 	typedef ENV env;
@@ -281,7 +276,7 @@ struct eval<cons<SYM(QUOTE), cons<REST, nil> >, ENV>
 
 // (if TEST TRUE_CLAUSE FALSE_CLAUSE)
 template <typename TEST, typename T, typename F, typename ENV>
-struct eval<cons<SYM(IF), cons<TEST, cons<T, cons<F, nil> > > >, ENV>
+struct eval<cons<IF, cons<TEST, cons<T, cons<F, nil> > > >, ENV>
 {
 	typedef typename select_type<
 		same_type<typename eval<TEST, ENV>::value, nil>::value,
@@ -292,7 +287,7 @@ struct eval<cons<SYM(IF), cons<TEST, cons<T, cons<F, nil> > > >, ENV>
 
 // (set VAR FORM)
 template <typename VAR, typename FORM, typename ENV>
-struct eval<cons<SYM(SET), cons<VAR, cons<FORM, nil> > >, ENV>
+struct eval<cons<SET, cons<VAR, cons<FORM, nil> > >, ENV>
 {
 	typedef eval<FORM, ENV> result;
 	typedef typename result::value value;
@@ -302,11 +297,11 @@ struct eval<cons<SYM(SET), cons<VAR, cons<FORM, nil> > >, ENV>
 
 // (progn FIRST REST) => (eval first), (progn REST)
 template <typename FIRST, typename REST, typename ENV>
-class eval<cons<SYM(PROGN), cons <FIRST, REST> >, ENV>
+class eval<cons<PROGN, cons <FIRST, REST> >, ENV>
 {
 	typedef eval<FIRST, ENV> first_result;
 	typedef typename first_result::env first_env;
-	typedef eval<cons<SYM(PROGN), REST>, first_env> result;
+	typedef eval<cons<PROGN, REST>, first_env> result;
 //	typedef first_result result;
 public:
 	typedef typename result::value value;
@@ -315,7 +310,7 @@ public:
 
 // (progn LAST)
 template <typename LAST, typename ENV>
-class eval<cons<SYM(PROGN), cons<LAST, nil> >, ENV>
+class eval<cons<PROGN, cons<LAST, nil> >, ENV>
 {
 	typedef eval<LAST, ENV> result;
 public:
@@ -365,7 +360,7 @@ class apply
 	typedef typename create_frame_eval<formals, ACTUALS, ENV>::value new_frame;
 	typedef typename push_frame<new_frame, ENV>::value subenv;
 	
-	typedef eval<cons<SYM(PROGN), body>, subenv> result;
+	typedef eval<cons<PROGN, body>, subenv> result;
 public:
 	typedef typename result::value value;
 	typedef typename pop_frame<typename result::env>::value env;
@@ -399,10 +394,10 @@ public:
 
 // (lambda ...)
 template <typename LAMBDA_REST, typename ENV>
-class eval<cons<SYM(LAMBDA), LAMBDA_REST>, ENV>
+class eval<cons<LAMBDA, LAMBDA_REST>, ENV>
 {
 public:
-	typedef cons<SYM(LAMBDA), LAMBDA_REST> value;
+	typedef cons<LAMBDA, LAMBDA_REST> value;
 	typedef ENV env;
 };
 
@@ -424,66 +419,66 @@ typedef add_binding<cons<PLUS, PLUS>, empty_env>::value initial_env;
 int main()
 {
 	// (cons 3 (quote 5 cons 2))
-/*	typedef LIST3(SYM(CONS),
+/*	typedef LIST3(CONS,
 				INT(3),
-				LIST4(SYM(QUOTE), INT(5), SYM(CONS), INT(2))) prog;*/
+				LIST4(QUOTE, INT(5), CONS, INT(2))) prog;*/
 	// (if nil (cons 5 2) (quote 2 5))
-/*	typedef LIST4(SYM(IF), SYM(T),
-				LIST3(SYM(CONS), INT(5), INT(2)),
-				LIST3(SYM(QUOTE), INT(2), INT(5))) prog;*/
+/*	typedef LIST4(IF, T,
+				LIST3(CONS, INT(5), INT(2)),
+				LIST3(QUOTE, INT(2), INT(5))) prog;*/
 	// (if t (quote 5 2) (quote 2 5))
-	/*typedef LIST4(SYM(IF), SYM(T),
-				LIST3(SYM(QUOTE), INT(5), INT(2)),
-				LIST3(SYM(QUOTE), INT(2), INT(5))) prog;*/
+	/*typedef LIST4(IF, T,
+				LIST3(QUOTE, INT(5), INT(2)),
+				LIST3(QUOTE, INT(2), INT(5))) prog;*/
 	// (set a (set b (quote 5 2)))
-/*	typedef LIST3(SYM(SET), SYM(A),
-							LIST3(SYM(SET),
-								  SYM(B),
-								  LIST3(SYM(QUOTE), INT(5), INT(2)))) prog;*/
+/*	typedef LIST3(SET, A,
+							LIST3(SET,
+								  B,
+								  LIST3(QUOTE, INT(5), INT(2)))) prog;*/
 	// (progn (set a 5) a)
-//	typedef LIST3(SYM(PROGN), LIST3(SYM(SET), SYM(A), INT(5)), SYM(A)) prog;
+//	typedef LIST3(PROGN, LIST3(SET, A, INT(5)), A) prog;
 	// ((lambda (a b) (cons a b)) 5 2)
-	typedef LIST3(LIST3(SYM(LAMBDA),
-						LIST2(SYM(A), SYM(B)),
-						CALL2(CONS, SYM(A), SYM(B))),
+	typedef LIST3(LIST3(LAMBDA,
+						LIST2(A, B),
+						CALL2(CONS, A, B)),
 				  INT(5), INT(2)) inline_lambda;
 	/* (set append
 			(lambda (a b)
 			  (if (null a)
 			  		b
 				(cons (car a) (append (cdr a) b))))) */
-	typedef LIST3(SYM(SET), SYM(APPEND),
-			LIST3(SYM(LAMBDA), LIST2(SYM(A), SYM(B)),
-				LIST4(SYM(IF),
-					LIST2(SYM(null), SYM(A)),
-					SYM(B),
-					LIST3(SYM(CONS),
-						LIST2(SYM(CAR), SYM(A)),
-						LIST3(SYM(CONS),
-							LIST2(SYM(CDR), SYM(A)),
-							SYM(B)))))) set_append;
+	typedef LIST3(SET, APPEND,
+			LIST3(LAMBDA, LIST2(A, B),
+				LIST4(IF,
+					LIST2(null, A),
+					B,
+					LIST3(CONS,
+						LIST2(CAR, A),
+						LIST3(CONS,
+							LIST2(CDR, A),
+							B))))) set_append;
 	// (append (quote (nil)) (quote (4 5 6)))
-	typedef LIST3(SYM(APPEND),
-				  LIST2(SYM(QUOTE), LIST2(INT(1), INT(2))),
-				  LIST2(SYM(QUOTE), LIST3(INT(4), INT(5), INT(6)))) use_append;
+	typedef LIST3(APPEND,
+				  LIST2(QUOTE, LIST2(INT(1), INT(2))),
+				  LIST2(QUOTE, LIST3(INT(4), INT(5), INT(6)))) use_append;
 	// (set a 5)
-	typedef CALL2(SET, SYM(A), INT(5)) set_a;
+	typedef CALL2(SET, A, INT(5)) set_a;
 	// (set c (lambda (a b) (cons <inline_lamba> (car b))))
-	typedef LIST3(SYM(SET),
-				  SYM(C),
-				  LIST3(SYM(LAMBDA), LIST2(SYM(A), SYM(B)),
-				  	LIST3(SYM(CONS), inline_lambda, LIST2(SYM(CAR), SYM(B))))) set_c_lambda;
+	typedef LIST3(SET,
+				  C,
+				  LIST3(LAMBDA, LIST2(A, B),
+				  	LIST3(CONS, inline_lambda, LIST2(CAR, B)))) set_c_lambda;
 	// (c 1 (quote (2 3)))
-	typedef LIST3(SYM(C), INT(1), LIST2(SYM(QUOTE), LIST2(INT(7), INT(8)))) run_c;
-	//typedef LIST4(SYM(PROGN), set_c_lambda, set_a, run_c) prog;
-	//typedef LIST3(SYM(PROGN), set_append, use_append) prog;
-	//typedef CALL2(PROGN, CALL2(SET, SYM(A), nil), CALL1(null, SYM(A))) prog;
+	typedef LIST3(C, INT(1), LIST2(QUOTE, LIST2(INT(7), INT(8)))) run_c;
+	//typedef LIST4(PROGN, set_c_lambda, set_a, run_c) prog;
+	//typedef LIST3(PROGN, set_append, use_append) prog;
+	//typedef CALL2(PROGN, CALL2(SET, A, nil), CALL1(null, A)) prog;
 	
 	typedef set_append prog;
 	//typedef use_append prog2;
-	typedef LIST3(SYM(APPEND),
-				  LIST2(SYM(QUOTE), LIST1(INT(1))),
-				  LIST2(SYM(QUOTE), LIST3(INT(4), INT(5), INT(6)))) prog2;
+	typedef LIST3(APPEND,
+				  LIST2(QUOTE, LIST1(INT(1))),
+				  LIST2(QUOTE, LIST3(INT(4), INT(5), INT(6)))) prog2;
 	typedef eval<prog, initial_env> eval_result1;
 	typedef eval<prog2, eval_result1::env> eval_result;
 	typedef eval_result::value value;
