@@ -21,3 +21,8 @@
 >>>
 t
 >>>= 0
+
+./runlisp.py '(progn (set a nil) (set b (lambda () a)) (set a (quote t)) (b))'
+>>>
+t
+>>>= 0

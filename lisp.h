@@ -2,114 +2,6 @@
 #include "lists.h"
 #include "print.h"
 
-typedef cons<nil, nil> empty_env;
-
-template <typename BINDING, typename ENV>
-class add_binding
-{
-	typedef typename ENV::car first_frame;
-	typedef typename ENV::cdr rest_frames;
-	typedef cons<BINDING, first_frame> new_first_frame;
-public:
-	typedef cons<new_first_frame, rest_frames> value;
-};
-
-template <typename FRAME, typename ENV>
-class push_frame
-{
-public:
-	typedef cons<FRAME, ENV> value;
-};
-
-template <typename ENV>
-class pop_frame
-{
-public:
-	typedef typename ENV::cdr value;
-};
-
-template <typename FORMALS, typename VALUES, typename ENV>
-class bind_parameters
-{
-	typedef cons<typename FORMALS::car, typename VALUES::car> first_binding;
-	typedef bind_parameters<typename FORMALS::cdr,
-							typename VALUES::cdr,
-							ENV> rest_bindings;
-public:
-	typedef add_binding<first_binding, rest_bindings> value;
-};
-
-template <typename ENV>
-struct bind_parameters<nil, nil, ENV>
-{
-	typedef ENV value;
-};
-
-struct no_binding_error
-{};
-
-template <typename ENV, typename SYM>
-struct get_binding;
-
-template <typename FRAME, typename SYM>
-struct get_frame_binding;
-
-template <typename FIRST, typename REST_FRAME, typename SYM>
-struct get_frame_binding<cons<FIRST, REST_FRAME>, SYM>
-{
-	typedef typename get_frame_binding<REST_FRAME, SYM>::value value;
-};
-
-template <typename REST_FRAME, typename VALUE, typename SYM>
-struct get_frame_binding<cons<cons<SYM, VALUE>, REST_FRAME>, SYM>
-{
-	typedef VALUE value;
-};
-
-template <typename SYM>
-struct get_frame_binding<nil, SYM>
-{
-	typedef no_binding_error value;
-};
-
-template <typename ENV, typename SYM>
-struct get_binding_int;
-
-template <typename SYM>
-struct get_binding_int<nil, SYM>
-{
-	typedef no_binding_error value;
-};
-
-template <typename ENV, typename SYM>
-struct get_binding_int
-{
-	typedef typename get_frame_binding<typename ENV::car, SYM>::value frameres;
-	
-	typedef typename select_type<
-		same_type<frameres, no_binding_error>::value,
-		typename get_binding_int<typename ENV::cdr, SYM>::value,
-		frameres>::type value;
-};
-
-template <typename ENV, typename SYM>
-class get_binding
-{
-	typedef typename get_binding_int<ENV, SYM>::value result;
-	
-	//BOOST_STATIC_ASSERT(!(same_type<result, no_binding_error>::value));
-public:
-	typedef result value;
-};
-
-/*
-	(eval form env)
-	form is a lisp++ form to evaluate
-	env is an association list of variables with their respective values
-*/
-template <typename FORM, typename ENV>
-struct eval;
-
 template <const char *sym_val>
 struct lisp_symbol
 {};
@@ -160,6 +52,129 @@ DEFINE(C, "c")
 DEFINE(D, "d")
 DEFINE(APPEND, "append")
 DEFINE(APPEND_2, "append-2")
+
+typedef cons<nil, nil> empty_env;
+
+template <typename ARGS, typename BODY, typename ENV>
+struct lambda
+{
+	typedef ARGS args;
+	typedef BODY body;
+	typedef ENV env;
+
+	typedef cons<LAMBDA, cons<ARGS, BODY> > source;
+};
+template <typename ARGS, typename BODY, typename ENV>
+struct print_val<lambda<ARGS, BODY, ENV> >:
+	print_val<typename lambda<ARGS, BODY, ENV>::source>
+{};
+
+template <typename BINDING, typename ENV>
+class add_binding
+{
+	typedef typename ENV::car first_frame;
+	typedef typename ENV::cdr rest_frames;
+	typedef cons<BINDING, first_frame> new_first_frame;
+public:
+	typedef cons<new_first_frame, rest_frames> value;
+};
+
+template <typename FRAME, typename ENV>
+class push_frame
+{
+public:
+	typedef cons<FRAME, ENV> value;
+};
+
+template <typename ENV>
+class pop_frame
+{
+public:
+	typedef typename ENV::cdr value;
+};
+
+template <typename FORMALS, typename VALUES, typename ENV>
+class bind_parameters
+{
+	typedef cons<typename FORMALS::car, typename VALUES::car> first_binding;
+	typedef bind_parameters<typename FORMALS::cdr,
+							typename VALUES::cdr,
+							ENV> rest_bindings;
+public:
+	typedef add_binding<first_binding, rest_bindings> value;
+};
+
+template <typename ENV>
+struct bind_parameters<nil, nil, ENV>
+{
+	typedef ENV value;
+};
+
+template <typename SYM>
+struct no_binding_error
+{};
+
+template <typename ENV, typename SYM>
+struct get_binding;
+
+template <typename FRAME, typename SYM>
+struct get_frame_binding;
+
+template <typename FIRST, typename REST_FRAME, typename SYM>
+struct get_frame_binding<cons<FIRST, REST_FRAME>, SYM>
+{
+	typedef typename get_frame_binding<REST_FRAME, SYM>::value value;
+};
+
+template <typename REST_FRAME, typename VALUE, typename SYM>
+struct get_frame_binding<cons<cons<SYM, VALUE>, REST_FRAME>, SYM>
+{
+	typedef VALUE value;
+};
+
+template <typename SYM>
+struct get_frame_binding<nil, SYM>
+{
+	typedef no_binding_error<SYM> value;
+};
+
+template <typename ENV, typename SYM>
+struct get_binding_int;
+
+template <typename SYM>
+struct get_binding_int<nil, SYM>
+{
+	typedef no_binding_error<SYM> value;
+};
+
+template <typename ENV, typename SYM>
+struct get_binding_int
+{
+	typedef typename get_frame_binding<typename ENV::car, SYM>::value frameres;
+	
+	typedef typename select_type<
+		same_type<frameres, no_binding_error<SYM> >::value,
+		typename get_binding_int<typename ENV::cdr, SYM>::value,
+		frameres>::type value;
+};
+
+template <typename ENV, typename SYM>
+class get_binding
+{
+	typedef typename get_binding_int<ENV, SYM>::value result;
+	
+	//BOOST_STATIC_ASSERT(!(same_type<result, no_binding_error>::value));
+public:
+	typedef result value;
+};
+
+/*
+	(eval form env)
+	form is a lisp++ form to evaluate
+	env is an association list of variables with their respective values
+*/
+template <typename FORM, typename ENV>
+struct eval;
 
 template <typename A, typename B>
 struct list2
@@ -322,9 +337,6 @@ public:
 template <typename FORMALS, typename ACTUALS, typename ENV>
 class create_frame_eval
 {
-//	BOOST_STATIC_ASSERT(
-//		!(same_type<ACTUALS, nil>::value) && !(same_type<FORMALS, nil>::value));
-
 	typedef eval<typename ACTUALS::car, ENV> result;
 	typedef cons<typename FORMALS::car, typename result::value> first_binding;
 	typedef create_frame_eval<typename FORMALS::cdr,
@@ -334,18 +346,6 @@ public:
 	typedef cons<first_binding, typename rest_bindings::value> value;
 };
 
-/*template <typename FORMALS, typename ENV>
-class create_frame_eval<FORMALS, nil, ENV>
-{
-	BOOST_STATIC_ASSERT(false);
-};
-
-template <typename ACTUALS, typename ENV>
-class create_frame_eval<nil, ACTUALS, ENV>
-{
-	BOOST_STATIC_ASSERT(false);
-};*/
-
 template <typename ENV>
 class create_frame_eval<nil, nil, ENV>
 {
@@ -353,18 +353,19 @@ public:
 	typedef nil value;
 };
 
-template <typename LAMBDA, typename ACTUALS, typename ENV>
-class apply
+template <typename FUN, typename ACTUALS, typename ENV>
+class apply;
+
+template <typename FORMALS, typename BODY, typename LEXENV,
+		typename ACTUALS, typename ENV> 
+class apply<lambda<FORMALS, BODY, LEXENV>, ACTUALS, ENV>
 {
-	typedef SECOND(LAMBDA) formals;
-	typedef typename LAMBDA::cdr::cdr body;
-	typedef typename create_frame_eval<formals, ACTUALS, ENV>::value new_frame;
+	typedef typename create_frame_eval<FORMALS, ACTUALS, ENV>::value new_frame;
 	typedef typename push_frame<new_frame, ENV>::value subenv;
-	
-	typedef eval<cons<PROGN, body>, subenv> result;
+	typedef eval<cons<PROGN, BODY>, subenv> result;
 public:
 	typedef typename result::value value;
-	typedef typename pop_frame<typename result::env>::value env;
+	typedef ENV env;
 };
 
 template <typename ENV>
@@ -394,15 +395,15 @@ public:
 };
 
 // (lambda ...)
-template <typename LAMBDA_REST, typename ENV>
-class eval<cons<LAMBDA, LAMBDA_REST>, ENV>
+template <typename ARGS, typename BODY, typename ENV>
+class eval<cons<LAMBDA, cons<ARGS, BODY> >, ENV>
 {
 public:
-	typedef cons<LAMBDA, LAMBDA_REST> value;
+	typedef lambda<ARGS, BODY, ENV> value;
 	typedef ENV env;
 };
 
-// (SYM ACTUALS)
+// (FUN ACTUALS)
 template <typename FUN, typename ACTUALS, typename ENV>
 class eval<cons<FUN, ACTUALS>, ENV>
 {
