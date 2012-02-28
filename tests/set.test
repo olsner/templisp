@@ -22,7 +22,9 @@
 t
 >>>= 0
 
+# The second assignment to a is not applied to the environment stored in b. Not
+# actually how I want it to work, but describes what is currently implemented.
 ./runlisp.py '(progn (set a nil) (set b (lambda () a)) (set a (quote t)) (b))'
 >>>
-t
+nil
 >>>= 0

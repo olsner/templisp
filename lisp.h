@@ -50,6 +50,9 @@ DEFINE(A, "a")
 DEFINE(B, "b")
 DEFINE(C, "c")
 DEFINE(D, "d")
+DEFINE(F, "f")
+DEFINE(G, "g")
+DEFINE(X, "x")
 DEFINE(APPEND, "append")
 DEFINE(APPEND_2, "append-2")
 
@@ -62,11 +65,26 @@ struct lambda
 	typedef BODY body;
 	typedef ENV env;
 
-	typedef cons<LAMBDA, cons<ARGS, BODY> > source;
+	typedef cons<LAMBDA, cons<ARGS, cons<ENV, BODY> > > source;
 };
 template <typename ARGS, typename BODY, typename ENV>
 struct print_val<lambda<ARGS, BODY, ENV> >:
 	print_val<typename lambda<ARGS, BODY, ENV>::source>
+{};
+template <typename ARGS, typename BODY, typename VAR, typename ENV>
+struct fundef
+{
+	typedef lambda<ARGS, BODY, fundef> lam;
+	typedef ARGS args;
+	typedef BODY body;
+	typedef typename ENV::cdr cdr;
+	typedef cons<cons<VAR,lam>,typename ENV::car> car;
+
+	typedef cons<SET,cons<VAR,cons<cons<LAMBDA,cons<args,body> >,nil> > > source;
+};
+template <typename ARGS, typename BODY, typename VAR, typename ENV>
+struct print_val<fundef<ARGS, BODY, VAR, ENV> >:
+	print_val<typename fundef<ARGS, BODY, VAR, ENV>::source>
 {};
 
 template <typename BINDING, typename ENV>
@@ -111,8 +129,7 @@ struct bind_parameters<nil, nil, ENV>
 };
 
 template <typename SYM>
-struct no_binding_error
-{};
+struct no_binding_error;
 
 template <typename ENV, typename SYM>
 struct get_binding;
@@ -301,6 +318,15 @@ struct eval<cons<IF, cons<TEST, cons<T, cons<F, nil> > > >, ENV>
 	typedef typename result_eval::env env;
 };
 
+// TODO Rename to define or defun...
+// (set VAR (lambda ...))
+template <typename VAR, typename ARGS, typename BODY, typename ENV>
+struct eval<cons<SET,cons<VAR,cons<cons<LAMBDA, cons<ARGS, BODY> >,nil> > >, ENV>
+{
+	typedef fundef<ARGS, BODY, VAR, ENV> value;
+	typedef value env;
+};
+
 // (set VAR FORM)
 template <typename VAR, typename FORM, typename ENV>
 struct eval<cons<SET, cons<VAR, cons<FORM, nil> > >, ENV>
@@ -357,11 +383,11 @@ template <typename FUN, typename ACTUALS, typename ENV>
 class apply;
 
 template <typename FORMALS, typename BODY, typename LEXENV,
-		typename ACTUALS, typename ENV> 
+		typename ACTUALS, typename ENV>
 class apply<lambda<FORMALS, BODY, LEXENV>, ACTUALS, ENV>
 {
 	typedef typename create_frame_eval<FORMALS, ACTUALS, ENV>::value new_frame;
-	typedef typename push_frame<new_frame, ENV>::value subenv;
+	typedef typename push_frame<new_frame, LEXENV>::value subenv;
 	typedef eval<cons<PROGN, BODY>, subenv> result;
 public:
 	typedef typename result::value value;
