@@ -46,3 +46,102 @@ struct alloc<heap<Xs...>, V>
 	typedef heap<Xs..., V> heap;
 	typedef ptr<sizeof...(Xs)> value;
 };
+
+namespace gc
+{
+template <typename T> struct fwd;
+template <typename S, typename D, typename R, typename Val>
+struct scavenge2;
+
+template <typename S, typename D, typename R>
+struct scavenge
+{
+private:
+	typedef typename peek<S, R>::value old_val;
+	typedef scavenge2<S,D,R,old_val> s;
+public:
+	typedef typename s::src src;
+	typedef typename s::dest dest;
+	typedef typename s::value value;
+};
+
+// Takes a heap of roots, returns (in value) a heap with the new-heap pointers
+// for those roots.
+template <typename S, typename D, typename Rs>
+struct gc;
+
+template <typename S, typename D, typename R>
+struct gc<S,D,heap<R> >
+{
+	typedef scavenge<S,D,R> s;
+	typedef typename s::src src;
+	typedef typename s::dest dest;
+	typedef heap<typename s::value> value;
+};
+
+template <typename S, typename D, typename R, typename... Rs>
+struct gc<S,D,heap<R,Rs...> >
+{
+	typedef scavenge<S,D,R> s;
+	typedef gc<typename s::src, typename s::dest, heap<Rs...> > s2;
+	typedef typename s2::src src;
+	typedef typename s2::dest dest;
+	typedef typename cons_heap<typename s::value, typename s2::value>::value value;
+};
+template <typename S, typename R>
+struct get_fwd
+{
+	typedef typename peek<S, R>::value v;
+	typedef typename get_fwd<S, v>::value value;
+};
+template <typename S, typename V>
+struct get_fwd<S,fwd<V> >
+{
+	typedef V value;
+};
+
+template <typename S, typename D, typename R>
+struct scavenge_object
+{
+	// Must be specialized for any object that has pointers!
+	typedef S src;
+	typedef D dest;
+	typedef R value;
+};
+
+// 1. Peek the old value
+// 2. If the old value is a forwarding pointer, just give back the original new heap and the forwarded pointer
+// 3. Otherwise, store a forwarding pointer, allocate a new target object, scavenge all references, return the forwarded pointer
+template <typename S, typename D, typename R, typename Val>
+struct scavenge2
+{
+private:
+	typedef alloc<D, nil> new_copy;
+	typedef typename new_copy::value new_ptr;
+	typedef typename new_copy::heap d2;
+	typedef typename poke<S, R, fwd<new_ptr> >::value s2;
+	typedef scavenge_object<s2, d2, Val> scaved;
+public:
+	typedef typename scaved::src src;
+	typedef typename poke<typename scaved::dest, new_ptr, typename scaved::value>::value dest;
+	typedef new_ptr value;
+};
+template <typename S, typename D, typename R, typename Fwd>
+struct scavenge2<S,D,R,fwd<Fwd> >
+{
+	typedef S src;
+	typedef D dst;
+	typedef Fwd value;
+};
+
+template <typename S, typename D, typename CAR, typename CDR>
+struct scavenge_object<S,D,cons<CAR, CDR> >
+{
+	typedef scavenge<S, D, CAR> scavCar;
+	typedef scavenge<typename scavCar::src, typename scavCar::dest, CDR> scavCdr;
+	typedef typename scavCdr::src src;
+	typedef typename scavCdr::dest dest;
+	typedef cons<typename scavCar::value, typename scavCdr::value> value;
+};
+
+}; // namespace gc
