@@ -12,7 +12,7 @@ struct print_val<value_type<char, val> >
 	inline print_val()
 	{
 		text=val;
-	};
+	}
 };
 
 /**************************************************************
