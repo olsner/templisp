@@ -1,10 +1,10 @@
 #include <string.h>
 
-/*
-templ_lists2.h: These lists have types as values all the way. This is to
-allow templ_lisp to represent different kinds of values as different types
-(also enabling using templates to match c++ type and c++ value of a lisp val)
-*/
+template <typename... T> struct list;
+template <> struct list<>
+{ typedef nil value; };
+template <typename X, typename... Xs> struct list<X, Xs...>
+{ typedef cons<X, list<Xs...> > value; };
 
 template <typename CONS>
 struct length
@@ -51,3 +51,14 @@ struct append<nil, L2>
 {
 	typedef L2 value;
 };
+template <typename... Xs, typename... Ys>
+struct append<list<Xs...>, list<Ys...>>
+{
+	typedef typename list<Xs..., Ys...>::value value;
+};
+template <typename... Xs, typename B>
+struct append<list<Xs...>, B>
+{
+	typedef typename append<typename list<Xs...>::value, B>::value value;
+};
+

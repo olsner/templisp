@@ -57,64 +57,58 @@ DEFINE(X, "x")
 DEFINE(APPEND, "append")
 DEFINE(APPEND_2, "append-2")
 
-template <typename SP, typename HEAP>
-struct env
+template <typename HEAP, typename SP>
+struct env_
 {
 	typedef HEAP heap;
 	typedef SP sp; // pointer to current stack frame
-
-	typedef typename peek<heap, sp>::value::car frame;
-	typedef typename peek<heap, sp>::value::cdr rest_frames;
 };
-//typedef env<nil, heap<> > empty_env;
 
-typedef cons<nil, nil> empty_env;
-
-template <typename ARGS, typename BODY, typename ENV>
-struct lambda
+template <typename H, typename SP, typename P>
+struct peek<env_<H,SP>,P>
 {
-	typedef ARGS args;
-	typedef BODY body;
-	typedef ENV env;
-
-	typedef cons<LAMBDA, cons<ARGS, cons<ENV, BODY> > > source;
+	typedef peek<H, P> peeked;
+	typedef typename peeked::value value;
 };
-template <typename ARGS, typename BODY, typename ENV>
-struct print_val<lambda<ARGS, BODY, ENV> >:
-	print_val<typename lambda<ARGS, BODY, ENV>::source>
-{};
-template <typename ARGS, typename BODY, typename VAR, typename ENV>
-struct fundef
+template <typename H, typename SP, typename P, typename V>
+struct poke<env_<H,SP>,P,V>
 {
-	typedef lambda<ARGS, BODY, fundef> lam;
-	typedef ARGS args;
-	typedef BODY body;
-	typedef typename ENV::cdr cdr;
-	typedef cons<cons<VAR,lam>,typename ENV::car> car;
-
-	typedef cons<SET,cons<VAR,cons<cons<LAMBDA,cons<args,body> >,nil> > > source;
+	typedef poke<H, P, V> poked;
+	typedef env_<typename poked::value,SP> value;
 };
-template <typename ARGS, typename BODY, typename VAR, typename ENV>
-struct print_val<fundef<ARGS, BODY, VAR, ENV> >:
-	print_val<typename fundef<ARGS, BODY, VAR, ENV>::source>
-{};
 
+template <typename F, typename ENV>
+struct set_frame
+{
+	typedef cons<F, typename ENV::cdr> value;
+};
+template <typename F, typename H, typename SP>
+struct set_frame<F, env_<H,SP> >
+{
+	typedef env_<H,SP> env;
+	typedef typename peek<env, SP>::value::cdr cdr;
+	typedef typename poke<env, SP, cons<F,cdr> >::value value;
+};
 template <typename BINDING, typename ENV>
 class add_binding
 {
-	typedef typename ENV::car first_frame;
-	typedef typename ENV::cdr rest_frames;
+	typedef typename ENV::sp sp;
+	typedef typename peek<ENV, sp>::value::car first_frame;
 	typedef cons<BINDING, first_frame> new_first_frame;
 public:
-	typedef cons<new_first_frame, rest_frames> value;
+	typedef typename set_frame<new_first_frame, ENV>::value value;
 };
 
 template <typename FRAME, typename ENV>
-class push_frame
+class push_frame;
+template <typename FRAME, typename H, typename SP>
+class push_frame<FRAME, env_<H,SP> >
 {
+	typedef alloc<H, cons<FRAME,SP> > a;
 public:
-	typedef cons<FRAME, ENV> value;
+	typedef env_<typename a::heap, typename a::value> value;
 };
+
 
 template <typename ENV>
 class pop_frame
@@ -149,16 +143,15 @@ struct get_binding;
 template <typename FRAME, typename SYM>
 struct get_frame_binding;
 
-template <typename FIRST, typename REST_FRAME, typename SYM>
-struct get_frame_binding<cons<FIRST, REST_FRAME>, SYM>
-{
-	typedef typename get_frame_binding<REST_FRAME, SYM>::value value;
-};
-
 template <typename REST_FRAME, typename VALUE, typename SYM>
 struct get_frame_binding<cons<cons<SYM, VALUE>, REST_FRAME>, SYM>
 {
 	typedef VALUE value;
+};
+template <typename FIRST, typename REST_FRAME, typename SYM>
+struct get_frame_binding<cons<FIRST, REST_FRAME>, SYM>
+{
+	typedef typename get_frame_binding<REST_FRAME, SYM>::value value;
 };
 
 template <typename SYM>
@@ -167,35 +160,44 @@ struct get_frame_binding<nil, SYM>
 	typedef no_binding_error<SYM> value;
 };
 
-template <typename ENV, typename SYM>
+template <typename ENV, typename SP, typename SYM>
 struct get_binding_int;
 
-template <typename SYM>
-struct get_binding_int<nil, SYM>
+template <typename ENV, typename SYM>
+struct get_binding_int<ENV, nil, SYM>
 {
 	typedef no_binding_error<SYM> value;
 };
 
-template <typename ENV, typename SYM>
+template <typename ENV, typename SP, typename SYM>
 struct get_binding_int
 {
-	typedef typename get_frame_binding<typename ENV::car, SYM>::value frameres;
-	
+	typedef typename peek<ENV, SP>::value sp;
+	typedef typename get_frame_binding<typename sp::car, SYM>::value frameres;
+
 	typedef typename select_type<
 		same_type<frameres, no_binding_error<SYM> >::value,
-		typename get_binding_int<typename ENV::cdr, SYM>::value,
+		typename get_binding_int<ENV, typename sp::cdr, SYM>::value,
 		frameres>::type value;
 };
 
 template <typename ENV, typename SYM>
-class get_binding
+struct get_binding
 {
-	typedef typename get_binding_int<ENV, SYM>::value result;
-	
-	//BOOST_STATIC_ASSERT(!(same_type<result, no_binding_error>::value));
-public:
-	typedef result value;
+	typedef typename get_binding_int<ENV, typename ENV::sp, SYM>::value value;
 };
+
+template <typename ARGS, typename BODY, typename SP>
+struct lambda
+{
+	typedef ARGS args;
+	typedef BODY body;
+	typedef SP sp;
+};
+template <typename ARGS, typename BODY, typename ENV>
+struct print_val<lambda<ARGS, BODY, ENV> >:
+	print_val<typename append<list<LAMBDA, ARGS>,BODY>::value>
+{};
 
 /*
 	(eval form env)
@@ -205,36 +207,7 @@ public:
 template <typename FORM, typename ENV>
 struct eval;
 
-template <typename A, typename B>
-struct list2
-{
-	typedef cons<A, cons<B, nil> > value;
-};
-
-template <typename A, typename B, typename C>
-struct list3
-{
-	typedef cons<A, typename list2<B, C>::value> value;
-};
-
-template <typename A, typename B, typename C, typename D>
-struct list4
-{
-	typedef cons<A, typename list3<B, C, D>::value> value;
-};
-
 /* Speed-up macros for common operations */
-
-#define LIST1(...) cons<__VA_ARGS__, nil>
-#define LIST2(...) list2<__VA_ARGS__>::value
-#define LIST3(...) list3<__VA_ARGS__>::value
-#define LIST4(...) list4<__VA_ARGS__>::value
-
-#define CALL1(_sym, ...) LIST2(_sym, __VA_ARGS__)
-#define CALL2(_sym, _arg1, _arg2) LIST3(_sym, _arg1, _arg2)
-#define CALL3(_sym, _arg1, _arg2, _arg3) LIST4(_sym, _arg1, _arg2, _arg3)
-
-#define Q(_form) CALL1(QUOTE, _form)
 
 template <typename LIST>
 struct first
@@ -330,21 +303,16 @@ struct eval<cons<IF, cons<TEST, cons<T, cons<F, nil> > > >, ENV>
 	typedef typename result_eval::env env;
 };
 
-// TODO Rename to define or defun...
-// (set VAR (lambda ...))
-template <typename VAR, typename ARGS, typename BODY, typename ENV>
-struct eval<cons<SET,cons<VAR,cons<cons<LAMBDA, cons<ARGS, BODY> >,nil> > >, ENV>
-{
-	typedef fundef<ARGS, BODY, VAR, ENV> value;
-	typedef value env;
-};
-
 // (set VAR FORM)
 template <typename VAR, typename FORM, typename ENV>
 struct eval<cons<SET, cons<VAR, cons<FORM, nil> > >, ENV>
 {
 	typedef eval<FORM, ENV> result;
 	typedef typename result::value value;
+	// FIXME Should find the existing binding and replace it instead
+	// For example: (set a t) inside a lambda where a is bound outside the
+	// lambda should mutate the outer environment, not simply add the variable
+	// to the inner scope.
 	typedef typename add_binding<cons<VAR, value>,
 								 typename result::env>::value env;
 };
@@ -394,10 +362,12 @@ public:
 template <typename FUN, typename ACTUALS, typename ENV>
 class apply;
 
-template <typename FORMALS, typename BODY, typename LEXENV,
-		typename ACTUALS, typename ENV>
-class apply<lambda<FORMALS, BODY, LEXENV>, ACTUALS, ENV>
+template <typename FORMALS, typename BODY, typename LEXSP,
+		typename ACTUALS, typename H, typename SP>
+class apply<lambda<FORMALS, BODY, LEXSP>, ACTUALS, env_<H,SP> >
 {
+	typedef env_<H,SP> ENV;
+	typedef env_<H,LEXSP> LEXENV;
 	typedef typename create_frame_eval<FORMALS, ACTUALS, ENV>::value new_frame;
 	typedef typename push_frame<new_frame, LEXENV>::value subenv;
 	typedef eval<cons<PROGN, BODY>, subenv> result;
@@ -437,7 +407,7 @@ template <typename ARGS, typename BODY, typename ENV>
 class eval<cons<LAMBDA, cons<ARGS, BODY> >, ENV>
 {
 public:
-	typedef lambda<ARGS, BODY, ENV> value;
+	typedef lambda<ARGS, BODY, typename ENV::sp> value;
 	typedef ENV env;
 };
 
@@ -452,5 +422,7 @@ public:
 	typedef typename result::env env;
 };
 
+typedef env_<heap<>,nil> really_empty_env;
+typedef push_frame<nil, really_empty_env>::value empty_env;
 typedef add_binding<cons<PLUS, PLUS>, empty_env>::value initial_env;
 
