@@ -59,9 +59,9 @@ def p(s):
 		return special.get(s, s.upper())
 
 def clang(out, prog):
-	return 'clang++ -o %s "-DPROG=%s" templ_lisp.cpp' % (out, prog)
+	return 'clang++ -o %s "-DPROG=%s" -std=c++0x templ_lisp.cpp' % (out, prog)
 def gcc(out, prog):
-	return 'g++ -o %s "-DPROG=%s" -ftemplate-depth-30 -Wall -g templ_lisp.cpp 2>&1 | ./filter.sh' % (out, prog)
+	return 'g++ -o %s "-DPROG=%s" -ftemplate-depth-30 -std=c++0x -Wall -g templ_lisp.cpp 2>&1 | ./filter.sh' % (out, prog)
 
 args = sys.argv[1:]
 if not args:

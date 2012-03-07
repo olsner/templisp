@@ -1,6 +1,7 @@
 #include "utils.h"
 #include "lists.h"
 #include "print.h"
+#include "heap.h"
 
 template <const char *sym_val>
 struct lisp_symbol
@@ -55,6 +56,17 @@ DEFINE(G, "g")
 DEFINE(X, "x")
 DEFINE(APPEND, "append")
 DEFINE(APPEND_2, "append-2")
+
+template <typename SP, typename HEAP>
+struct env
+{
+	typedef HEAP heap;
+	typedef SP sp; // pointer to current stack frame
+
+	typedef typename peek<heap, sp>::value::car frame;
+	typedef typename peek<heap, sp>::value::cdr rest_frames;
+};
+//typedef env<nil, heap<> > empty_env;
 
 typedef cons<nil, nil> empty_env;
 

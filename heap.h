@@ -1,6 +1,14 @@
 template <typename... T>
 struct heap
 {};
+// Template aliases require gcc 4.7, can't be bothered installing that :)
+//template <typename... T>
+//using mkheap = heap<T...>;
+template <typename... T>
+struct mkheap
+{
+	typedef heap<T...> value;
+};
 template <typename X, typename H> struct cons_heap;
 template <typename X, typename... Xs>
 struct cons_heap<X, heap<Xs...> >
@@ -43,7 +51,7 @@ struct poke<heap<X, Xs...>, ptr<p>, Val>
 template <typename... Xs, typename V>
 struct alloc<heap<Xs...>, V>
 {
-	typedef heap<Xs..., V> heap;
+	typedef typename mkheap<Xs..., V>::value heap;
 	typedef ptr<sizeof...(Xs)> value;
 };
 
