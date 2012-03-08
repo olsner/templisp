@@ -76,6 +76,13 @@ struct poke<env_<H,SP>,P,V>
 	typedef poke<H, P, V> poked;
 	typedef env_<typename poked::value,SP> value;
 };
+template <typename H, typename SP, typename V>
+struct alloc<env_<H,SP>,V>
+{
+	typedef alloc<H,V> alloced;
+	typedef env_<typename alloced::heap,SP> env;
+	typedef typename alloced::value value;
+};
 
 template <typename ENV, typename SP>
 struct re_sp;
@@ -261,17 +268,34 @@ class eval<cons<CONS, REST>, ENV>
 {
 	typedef eval<FIRST(REST), ENV> fir;
 	typedef eval<SECOND(REST), typename fir::env> sec;
+	typedef alloc<typename sec::env, cons<typename fir::value, typename sec::value> > alloced;
 public:
-	typedef cons<typename fir::value, typename sec::value> value;
-	typedef typename sec::env env;
+	typedef typename alloced::value value;
+	typedef typename alloced::env env;
+};
+
+template <typename ENV, typename V>
+struct car;
+
+template <typename ENV, typename CAR, typename CDR>
+struct car<ENV, cons<CAR,CDR> >
+{
+	typedef CAR value;
+};
+
+template <typename ENV, typename P>
+struct car
+{
+	typedef typename car<ENV, typename peek<ENV, P>::value>::value value;
 };
 
 // (car ARG)
 template <typename ARG, typename ENV>
 struct eval<cons<CAR, cons<ARG, nil> >, ENV>
 {
-	typedef typename eval<ARG, ENV>::value::car value;
-	typedef ENV env;
+	typedef eval<ARG, ENV> eval1;
+	typedef typename eval1::env env;
+	typedef typename car<env, typename eval1::value>::value value;
 };
 
 // (cdr ARG)
