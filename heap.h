@@ -153,3 +153,30 @@ struct scavenge_object<S,D,cons<CAR, CDR> >
 };
 
 }; // namespace gc
+
+template <typename ENV, typename V>
+struct deepeek
+{
+	typedef V value;
+};
+
+template <typename ENV, int p>
+struct deepeek<ENV,ptr<p> >
+{
+	typedef typename peek<ENV, ptr<p> >::value val1;
+	typedef typename deepeek<ENV, val1>::value value;
+};
+
+template <typename ENV, typename CAR, typename CDR>
+struct deepeek<ENV,cons<CAR,CDR> >
+{
+	typedef typename deepeek<ENV, CAR>::value car;
+	typedef typename deepeek<ENV, CDR>::value cdr;
+	typedef cons<car,cdr> value;
+};
+
+template <typename ENV, typename V>
+struct print_env:
+	print<typename deepeek<ENV, V>::value>
+{
+};
