@@ -377,6 +377,19 @@ struct eval<cons<IF, cons<TEST, cons<T, cons<F, nil> > > >, ENV>
 	typedef typename result_eval::env env;
 };
 
+// (set (cdr EXPR) FORM)
+template <typename EXPR, typename FORM, typename ENV>
+struct eval<cons<SET,cons<cons<CDR,cons<EXPR,nil> >,cons<FORM,nil> > >,ENV>
+{
+	typedef eval<EXPR, ENV> result1;
+	typedef typename result1::value p;
+	typedef eval<FORM, typename result1::env> result2;
+	typedef typename result2::value value;
+	typedef typename peek<typename result2::env, p>::value oldcons;
+	typedef cons<typename oldcons::car, value> newcons;
+	typedef typename poke<typename result2::env, p, newcons>::value env;
+};
+
 // (set VAR FORM)
 template <typename VAR, typename FORM, typename ENV>
 struct eval<cons<SET, cons<VAR, cons<FORM, nil> > >, ENV>
@@ -484,8 +497,8 @@ public:
 template <typename FUN, typename ACTUALS, typename ENV>
 class eval<cons<FUN, ACTUALS>, ENV>
 {
-	typedef typename eval<FUN, ENV>::value function_form;
-	typedef apply<function_form, ACTUALS, ENV> result;
+	typedef eval<FUN, ENV> fun;
+	typedef apply<typename fun::value, ACTUALS, typename fun::env> result;
 public:
 	typedef typename result::value value;
 	typedef typename result::env env;

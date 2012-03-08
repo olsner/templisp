@@ -31,3 +31,8 @@ t
 >>>
 t
 >>>= 0
+
+./runlisp.py '(progn (set a (cons 1 2)) (set b (lambda (x) (set (cdr x) (quote t)))) (b a) a)'
+>>>
+(1 . t)
+>>>= 0
