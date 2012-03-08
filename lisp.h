@@ -77,6 +77,15 @@ struct poke<env_<H,SP>,P,V>
 	typedef env_<typename poked::value,SP> value;
 };
 
+template <typename ENV, typename SP>
+struct re_sp;
+
+template <typename H, typename O, typename SP>
+struct re_sp<env_<H,O>,SP>
+{
+	typedef env_<H,SP> value;
+};
+
 template <typename F, typename ENV>
 struct set_frame
 {
@@ -373,7 +382,7 @@ class apply<lambda<FORMALS, BODY, LEXSP>, ACTUALS, env_<H,SP> >
 	typedef eval<cons<PROGN, BODY>, subenv> result;
 public:
 	typedef typename result::value value;
-	typedef ENV env;
+	typedef typename re_sp<typename result::env,SP>::value env;
 };
 
 template <typename ENV>
