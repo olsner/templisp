@@ -94,10 +94,7 @@ struct re_sp<env_<H,O>,SP>
 };
 
 template <typename F, typename ENV>
-struct set_frame
-{
-	typedef cons<F, typename ENV::cdr> value;
-};
+struct set_frame;
 template <typename F, typename H, typename SP>
 struct set_frame<F, env_<H,SP> >
 {
@@ -105,12 +102,12 @@ struct set_frame<F, env_<H,SP> >
 	typedef typename peek<env, SP>::value::cdr cdr;
 	typedef typename poke<env, SP, cons<F,cdr> >::value value;
 };
-template <typename BINDING, typename ENV>
+template <typename SYM, typename VAL, typename ENV>
 class add_binding
 {
 	typedef typename ENV::sp sp;
 	typedef typename peek<ENV, sp>::value::car first_frame;
-	typedef cons<BINDING, first_frame> new_first_frame;
+	typedef cons<cons<SYM,VAL>,first_frame> new_first_frame;
 public:
 	typedef typename set_frame<new_first_frame, ENV>::value value;
 };
@@ -136,12 +133,13 @@ public:
 template <typename FORMALS, typename VALUES, typename ENV>
 class bind_parameters
 {
-	typedef cons<typename FORMALS::car, typename VALUES::car> first_binding;
 	typedef bind_parameters<typename FORMALS::cdr,
 							typename VALUES::cdr,
 							ENV> rest_bindings;
 public:
-	typedef add_binding<first_binding, rest_bindings> value;
+	typedef add_binding<typename FORMALS::car,
+						typename VALUES::car,
+						rest_bindings> value;
 };
 
 template <typename ENV>
@@ -158,7 +156,6 @@ struct get_binding;
 
 template <typename FRAME, typename SYM>
 struct get_frame_binding;
-
 template <typename REST_FRAME, typename VALUE, typename SYM>
 struct get_frame_binding<cons<cons<SYM, VALUE>, REST_FRAME>, SYM>
 {
@@ -169,9 +166,26 @@ struct get_frame_binding<cons<FIRST, REST_FRAME>, SYM>
 {
 	typedef typename get_frame_binding<REST_FRAME, SYM>::value value;
 };
-
 template <typename SYM>
 struct get_frame_binding<nil, SYM>
+{
+	typedef no_binding_error<SYM> value;
+};
+
+template <typename FRAME, typename SYM, typename VAL>
+struct set_frame_binding;
+template <typename REST, typename SYM, typename _, typename VAL>
+struct set_frame_binding<cons<cons<SYM,_>,REST>,SYM,VAL>
+{
+	typedef cons<cons<SYM,VAL>,REST> value;
+};
+template <typename FIRST, typename REST, typename SYM, typename VAL>
+struct set_frame_binding<cons<FIRST, REST>,SYM,VAL>
+{
+	typedef cons<FIRST,typename set_frame_binding<REST,SYM,VAL>::value> value;
+};
+template <typename SYM, typename VAL>
+struct set_frame_binding<nil,SYM,VAL>
 {
 	typedef no_binding_error<SYM> value;
 };
@@ -202,6 +216,33 @@ struct get_binding
 {
 	typedef typename get_binding_int<ENV, typename ENV::sp, SYM>::value value;
 };
+
+template <typename ENV, typename SP, typename SYM, typename VAL>
+struct set_binding_int
+{
+	typedef typename peek<ENV, SP>::value sp;
+	typedef typename get_frame_binding<typename sp::car, SYM>::value get_res;
+
+	typedef typename set_frame_binding<typename sp::car, SYM, VAL>::value frameres;
+	typedef cons<frameres, typename sp::cdr> new_frame;
+
+	typedef typename select_type<
+		same_type<get_res, no_binding_error<SYM> >::value,
+		typename set_binding_int<ENV, typename sp::cdr, SYM, VAL>::value,
+		typename poke<ENV, SP, new_frame>::value>::type value;
+};
+template <typename ENV, typename SYM, typename VAL>
+struct set_binding_int<ENV,nil,SYM,VAL>
+{
+	typedef typename add_binding<SYM,VAL,ENV>::value value;
+};
+
+template <typename SYM, typename VAL, typename ENV>
+struct set_binding
+{
+	typedef typename set_binding_int<ENV, typename ENV::sp, SYM, VAL>::value value;
+};
+
 
 template <typename ARGS, typename BODY, typename SP>
 struct lambda
@@ -342,12 +383,7 @@ struct eval<cons<SET, cons<VAR, cons<FORM, nil> > >, ENV>
 {
 	typedef eval<FORM, ENV> result;
 	typedef typename result::value value;
-	// FIXME Should find the existing binding and replace it instead
-	// For example: (set a t) inside a lambda where a is bound outside the
-	// lambda should mutate the outer environment, not simply add the variable
-	// to the inner scope.
-	typedef typename add_binding<cons<VAR, value>,
-								 typename result::env>::value env;
+	typedef typename set_binding<VAR, value, typename result::env>::value env;
 };
 
 // (progn FIRST REST) => (eval first), (progn REST)
@@ -457,5 +493,5 @@ public:
 
 typedef env_<heap<>,nil> really_empty_env;
 typedef push_frame<nil, really_empty_env>::value empty_env;
-typedef add_binding<cons<PLUS, PLUS>, empty_env>::value initial_env;
+typedef add_binding<PLUS, PLUS, empty_env>::value initial_env;
 
