@@ -1,6 +1,6 @@
 # Adapted from Wikipedia's entry on lexical scope. g should see the outer-scope
 # binding for x, *not* the x bound by the first argument to f.
-./runlisp.py "(progn (set x 7) (set g (lambda () x)) (set f (lambda (x) (g))) (f 9))"
+./runlisp.py "(progn (set x 7) (define (g) x) (define (f x) (g)) (f 9))"
 >>>
 7
 >>>= 0

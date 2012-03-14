@@ -36,3 +36,18 @@ t
 >>>
 (1 . t)
 >>>= 0
+
+./runlisp.py '(progn (define a nil) (define (b) a) (set a (quote t)) (b))'
+>>>
+t
+>>>= 0
+
+./runlisp.py '(progn (define a nil) (define (b) (set a (quote t))) (b) a)'
+>>>
+t
+>>>= 0
+
+./runlisp.py '(progn (define a (cons 1 2)) (define (b x) (set (cdr x) (quote t))) (b a) a)'
+>>>
+(1 . t)
+>>>= 0

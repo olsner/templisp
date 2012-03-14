@@ -1,29 +1,29 @@
-./runlisp.py '(set append (lambda (a b) (if (null a) b (cons (car a) (append (cdr a) b)))))'
+./runlisp.py '(define (append a b) (if (null a) b (cons (car a) (append (cdr a) b))))'
 >>>
 (lambda (a b) (if (null a) b (cons (car a) (append (cdr a) b))))
 >>>= 0
 
-./runlisp.py '(progn (set append (lambda (a b) (if (null a) b (cons (car a) (append (cdr a) b))))) nil)'
+./runlisp.py '(progn (define (append a b) (if (null a) b (cons (car a) (append (cdr a) b)))) nil)'
 >>>
 nil
 >>>= 0
 
-./runlisp.py '(progn (set append (lambda (a b) (if (null a) b (cons (car a) (append (cdr a) b))))) (append (quote (1)) (quote (4 5 6))))'
+./runlisp.py '(progn (define (append a b) (if (null a) b (cons (car a) (append (cdr a) b)))) (append (quote (1)) (quote (4 5 6))))'
 >>>
 (1 4 5 6)
 >>>= 0
 
-./runlisp.py '(progn (set append (lambda (a b) (if (null a) b (cons (car a) (append (cdr a) b))))) (append nil (quote (1))))'
+./runlisp.py '(progn (define (append a b) (if (null a) b (cons (car a) (append (cdr a) b)))) (append nil (quote (1))))'
 >>>
 (1)
 >>>= 0
 
-./runlisp.py '(progn (set append (lambda (a b) (if (null a) b (cons (car a) (append (cdr a) b))))) (append (quote (1)) nil))'
+./runlisp.py '(progn (define (append a b) (if (null a) b (cons (car a) (append (cdr a) b)))) (append (quote (1)) nil))'
 >>>
 (1)
 >>>= 0
 
-./runlisp.py '(progn (set append (lambda (a b) (if (null a) b (cons (car a) (append (cdr a) b))))) (append nil nil))'
+./runlisp.py '(progn (define (append a b) (if (null a) b (cons (car a) (append (cdr a) b)))) (append nil nil))'
 >>>
 nil
 >>>= 0

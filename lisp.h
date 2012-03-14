@@ -17,22 +17,10 @@ struct lisp_symbol
 	}; \
 	typedef SYM(_sym) _sym;
 
-/*
-	(CONS a b) => cons<A, B>
-*/
 DEFINE(CONS, "cons")
-/*
-	(QUOTE a) => a
-	(QUOTE (a b c)) => (a b c)
-*/
 DEFINE(QUOTE, "quote")
-/*
-	(set a (form)) => evaluate form, assign value to variable a
-*/
+DEFINE(DEFINE, "define")
 DEFINE(SET, "set")
-/*
-	(lambda (argnames...) forms...)
-*/
 DEFINE(LAMBDA, "lambda")
 DEFINE(PROGN, "progn")
 DEFINE(IF, "if")
@@ -394,6 +382,25 @@ struct eval<cons<SET,cons<cons<CDR,cons<EXPR,nil> >,cons<FORM,nil> > >,ENV>
 template <typename VAR, typename FORM, typename ENV>
 struct eval<cons<SET, cons<VAR, cons<FORM, nil> > >, ENV>
 {
+	typedef eval<FORM, ENV> result;
+	typedef typename result::value value;
+	typedef typename set_binding<VAR, value, typename result::env>::value env;
+};
+
+// (define (fun args...) BODY)
+template <typename FUN, typename ARGS, typename BODY, typename ENV>
+struct eval<cons<DEFINE, cons<cons<FUN, ARGS>, BODY> >, ENV>
+{
+	typedef eval<cons<LAMBDA, cons<ARGS, BODY> >, ENV> result;
+	typedef typename result::value value;
+	typedef typename set_binding<FUN, value, typename result::env>::value env;
+};
+
+// (define VAR FORM)
+template <const char* NAME, typename FORM, typename ENV>
+struct eval<cons<DEFINE, cons<lisp_symbol<NAME>, cons<FORM, nil> > >, ENV>
+{
+	typedef lisp_symbol<NAME> VAR;
 	typedef eval<FORM, ENV> result;
 	typedef typename result::value value;
 	typedef typename set_binding<VAR, value, typename result::env>::value env;
