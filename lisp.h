@@ -241,178 +241,260 @@ struct lambda
 };
 template <typename ARGS, typename BODY, typename ENV>
 struct print_val<lambda<ARGS, BODY, ENV> >:
-	print_val<typename append<list<LAMBDA, ARGS>,BODY>::value>
+	print_val<typename list<LAMBDA, ARGS>::value>
 {};
 
-template <typename FORM, typename ENV>
-struct eval;
+template <typename EXPR>
+struct analyze;
+template <typename FUN, typename ACTUALS>
+class apply;
+
+template <typename T>
+struct analyze_many;
+
+template <typename CAR, typename CDR>
+struct analyze_many<cons<CAR,CDR> >
+{
+	typedef cons<analyze<CAR>, typename analyze_many<CDR>::value> value;
+};
+template <> struct analyze_many<nil> { typedef nil value; };
+
+// Helpers for evaluations without side-effects
+template <typename ENV>
+struct pureval
+{
+	typedef ENV env;
+};
 
 // value
-template <typename T, T val, typename ENV>
-struct eval<value_type<T, val>, ENV>
+template <typename T, T val>
+struct analyze<value_type<T, val>>
 {
-	typedef value_type<T, val> value;
-	typedef ENV env;
+	template <typename ENV> struct eval: pureval<ENV>
+	{
+		typedef value_type<T, val> value;
+	};
 };
 
 // variable (symbol)
-template <const char *SYM, typename ENV>
-struct eval<lisp_symbol<SYM>, ENV>
+template <const char *SYM>
+struct analyze<lisp_symbol<SYM> >
 {
-	typedef typename get_binding<ENV, lisp_symbol<SYM> >::value value;
-	typedef ENV env;
+	template <typename ENV> struct eval: pureval<ENV>
+	{
+		typedef typename get_binding<ENV, lisp_symbol<SYM> >::value value;
+	};
 };
 
 // nil
-template <typename ENV>
-struct eval<nil, ENV>
+template <> struct analyze<nil>
 {
-	typedef nil value;
-	typedef ENV env;
+	template <typename ENV> struct eval: pureval<ENV>
+	{
+		typedef nil value;
+	};
 };
 
 // (cons REST)
-template <typename REST, typename ENV>
-class eval<cons<CONS, REST>, ENV>
+template <typename CAR, typename CDR>
+class analyze<cons<CONS, cons<CAR, cons<CDR, nil> > > >
 {
-	typedef eval<typename REST::car, ENV> fir;
-	typedef eval<typename REST::cdr::car, typename fir::env> sec;
-	typedef alloc<typename sec::env, cons<typename fir::value, typename sec::value> > alloced;
+	typedef analyze<CAR> fir;
+	typedef analyze<CDR> sec;
 public:
-	typedef typename alloced::value value;
-	typedef typename alloced::env env;
+	template <typename ENV> struct eval
+	{
+		typedef typename fir::template eval<ENV> efir;
+		typedef typename sec::template eval<typename efir::env> esec;
+		typedef alloc<typename esec::env, cons<typename efir::value, typename esec::value> > alloced;
+
+		typedef typename alloced::value value;
+		typedef typename alloced::env env;
+	};
 };
 
-template <typename ENV, typename V>
-struct car;
-
+template <typename ENV, typename V> struct car;
 template <typename ENV, typename CAR, typename CDR>
 struct car<ENV, cons<CAR,CDR> >
 {
 	typedef CAR value;
 };
-
-template <typename ENV, typename P>
-struct car
+template <typename ENV, typename P> struct car
 {
 	typedef typename car<ENV, typename peek<ENV, P>::value>::value value;
 };
 
-// (car ARG)
-template <typename ARG, typename ENV>
-struct eval<cons<CAR, cons<ARG, nil> >, ENV>
+template <typename ENV, typename V> struct cdr;
+template <typename ENV, typename CAR, typename CDR>
+struct cdr<ENV, cons<CAR,CDR> >
 {
-	typedef eval<ARG, ENV> eval1;
-	typedef typename eval1::env env;
-	typedef typename car<env, typename eval1::value>::value value;
+	typedef CDR value;
+};
+template <typename ENV, typename P> struct cdr
+{
+	typedef typename cdr<ENV, typename peek<ENV, P>::value>::value value;
+};
+
+// (car ARG)
+template <typename ARG>
+struct apply<CAR, cons<ARG, nil> >
+{
+	template <typename ENV> struct eval
+	{
+		typedef typename ARG::template eval<ENV> arg;
+		typedef typename arg::env env;
+		typedef typename car<env, typename arg::value>::value value;
+	};
 };
 
 // (cdr ARG)
-template <typename ARG, typename ENV>
-struct eval<cons<CDR, cons<ARG, nil> >, ENV>
+template <typename ARG>
+struct apply<CDR, cons<ARG, nil> >
 {
-	typedef typename eval<ARG, ENV>::value::cdr value;
-	typedef ENV env;
+	template <typename ENV> struct eval
+	{
+		typedef typename ARG::template eval<ENV> arg;
+		typedef typename arg::env env;
+		typedef typename cdr<env, typename arg::value>::value value;
+	};
 };
 
 // (null ARG)
-template <typename ARG, typename ENV>
-class eval<cons<null, cons<ARG, nil> >, ENV>
+template <typename ARG>
+struct apply<null, cons<ARG, nil> >
 {
-	typedef typename eval<ARG, ENV>::value arg;
-public:
-	static const bool val = same_type<arg, nil>::value;
-	typedef typename select_type<val, T, nil>::type value;
-	typedef ENV env;
+	template <typename ENV> struct eval
+	{
+		typedef typename ARG::template eval<ENV> e;
+		static const bool val = same_type<typename e::value, nil>::value;
+		typedef typename select_type<val, T, nil>::type value;
+		typedef typename e::env env;
+	};
 };
 
 // (quote REST)
-template <typename REST, typename ENV>
-struct eval<cons<QUOTE, cons<REST, nil> >, ENV>
+template <typename REST>
+struct analyze<cons<QUOTE, cons<REST, nil> > >
 {
-	typedef REST value;
-	typedef ENV env;
+	template <typename ENV> struct eval: pureval<ENV>
+	{
+		typedef REST value;
+	};
 };
 
 // (if TEST TRUE_CLAUSE FALSE_CLAUSE)
-template <typename TEST, typename T, typename F, typename ENV>
-struct eval<cons<IF, cons<TEST, cons<T, cons<F, nil> > > >, ENV>
+template <typename TEST, typename T, typename F>
+struct analyze<cons<IF, cons<TEST, cons<T, cons<F, nil> > > > >
 {
-	typedef typename select_type<
-		same_type<typename eval<TEST, ENV>::value, nil>::value,
-		eval<F, ENV>, eval<T, ENV> >::type result_eval;
-	typedef typename result_eval::value value;
-	typedef typename result_eval::env env;
+	typedef analyze<TEST> aTest;
+	typedef analyze<T> aT;
+	typedef analyze<F> aF;
+	template <typename ENV> struct eval
+	{
+		typedef typename aTest::template eval<ENV> test_result;
+		typedef typename test_result::env test_env;
+		typedef typename select_type<
+			same_type<typename test_result::value, nil>::value,
+			typename aF::template eval<test_env>,
+			typename aT::template eval<test_env> >::type result;
+		typedef typename result::value value;
+		typedef typename result::env env;
+	};
 };
 
 // (set (cdr EXPR) FORM)
-template <typename EXPR, typename FORM, typename ENV>
-struct eval<cons<SET,cons<cons<CDR,cons<EXPR,nil> >,cons<FORM,nil> > >,ENV>
+template <typename EXPR, typename FORM>
+struct analyze<cons<SET,cons<cons<CDR,cons<EXPR,nil> >,cons<FORM,nil> > > >
 {
-	typedef eval<EXPR, ENV> result1;
-	typedef typename result1::value p;
-	typedef eval<FORM, typename result1::env> result2;
-	typedef typename result2::value value;
-	typedef typename peek<typename result2::env, p>::value oldcons;
-	typedef cons<typename oldcons::car, value> newcons;
-	typedef typename poke<typename result2::env, p, newcons>::value env;
+	typedef analyze<EXPR> aExpr;
+	typedef analyze<FORM> aForm;
+
+	template <typename ENV> struct eval
+	{
+		typedef typename aExpr::template eval<ENV> expr;
+		typedef typename aForm::template eval<typename expr::env> form;
+
+		typedef typename expr::value p;
+		typedef typename form::env oldenv;
+		typedef typename peek<oldenv, p>::value oldcons;
+		typedef cons<typename oldcons::car, typename form::value> value;
+		typedef typename poke<oldenv, p, value>::value env;
+	};
 };
 
 // (set VAR FORM)
-template <typename VAR, typename FORM, typename ENV>
-struct eval<cons<SET, cons<VAR, cons<FORM, nil> > >, ENV>
+template <typename VAR, typename FORM>
+struct analyze<cons<SET, cons<VAR, cons<FORM, nil> > > >
 {
-	typedef eval<FORM, ENV> result;
-	typedef typename result::value value;
-	typedef typename set_binding<VAR, value, typename result::env>::value env;
+	typedef analyze<FORM> val_analyze;
+	template <typename ENV> struct eval
+	{
+		typedef typename val_analyze::template eval<ENV> result;
+		typedef typename result::value value;
+		typedef typename set_binding<VAR, value, typename result::env>::value env;
+	};
 };
 
 // (define (fun args...) BODY)
-template <typename FUN, typename ARGS, typename BODY, typename ENV>
-struct eval<cons<DEFINE, cons<cons<FUN, ARGS>, BODY> >, ENV>
+template <typename FUN, typename ARGS, typename BODY>
+struct analyze<cons<DEFINE, cons<cons<FUN, ARGS>, BODY> > >
 {
-	typedef eval<cons<LAMBDA, cons<ARGS, BODY> >, ENV> result;
-	typedef typename result::value value;
-	typedef typename set_binding<FUN, value, typename result::env>::value env;
+	typedef analyze<cons<LAMBDA, cons<ARGS, BODY> > > val_analyze;
+	template <typename ENV> struct eval
+	{
+		typedef typename val_analyze::template eval<ENV> result;
+		typedef typename result::value value;
+		typedef typename set_binding<FUN, value, typename result::env>::value env;
+	};
 };
 
 // (define VAR FORM)
-template <const char* NAME, typename FORM, typename ENV>
-struct eval<cons<DEFINE, cons<lisp_symbol<NAME>, cons<FORM, nil> > >, ENV>
+template <const char* NAME, typename FORM>
+struct analyze<cons<DEFINE, cons<lisp_symbol<NAME>, cons<FORM, nil> > > >
 {
 	typedef lisp_symbol<NAME> VAR;
-	typedef eval<FORM, ENV> result;
-	typedef typename result::value value;
-	typedef typename set_binding<VAR, value, typename result::env>::value env;
+	typedef analyze<FORM> val_analyze;
+	template <typename ENV> struct eval
+	{
+		typedef typename val_analyze::template eval<ENV> result;
+		typedef typename result::value value;
+		typedef typename set_binding<VAR, value, typename result::env>::value env;
+	};
 };
 
-// (progn FIRST REST) => (eval first), (progn REST)
-template <typename FIRST, typename REST, typename ENV>
-class eval<cons<PROGN, cons <FIRST, REST> >, ENV>
+// (progn FIRST REST...)
+template <typename FIRST, typename REST>
+struct analyze<cons<PROGN, cons<FIRST,REST> > >
 {
-	typedef eval<FIRST, ENV> first_result;
-	typedef typename first_result::env first_env;
-	typedef eval<cons<PROGN, REST>, first_env> result;
-//	typedef first_result result;
+	typedef analyze<FIRST> first_analyze;
+	typedef analyze<cons<PROGN,REST> > rest_analyze;
 public:
-	typedef typename result::value value;
-	typedef typename result::env env;
+	template <typename ENV> struct eval
+	{
+		typedef typename first_analyze::template eval<ENV> first_eval;
+		typedef typename rest_analyze::template eval<typename first_eval::env> rest_eval;
+		typedef typename rest_eval::value value;
+		typedef typename rest_eval::env env;
+	};
 };
-
 // (progn LAST)
-template <typename LAST, typename ENV>
-class eval<cons<PROGN, cons<LAST, nil> >, ENV>
+template <typename LAST>
+class analyze<cons<PROGN, cons<LAST, nil> > >
 {
-	typedef eval<LAST, ENV> result;
+	typedef analyze<LAST> last_analyze;
 public:
-	typedef typename result::value value;
-	typedef typename result::env env;
+	template <typename ENV> struct eval
+	{
+		typedef typename last_analyze::template eval<ENV> last_eval;
+		typedef typename last_eval::value value;
+		typedef typename last_eval::env env;
+	};
 };
 
 template <typename FORMALS, typename ACTUALS, typename ENV>
 class create_frame_eval
 {
-	typedef eval<typename ACTUALS::car, ENV> result;
+	typedef typename ACTUALS::car::template eval<ENV> result;
 	typedef cons<typename FORMALS::car, typename result::value> first_binding;
 	typedef create_frame_eval<typename FORMALS::cdr,
 							  typename ACTUALS::cdr,
@@ -420,7 +502,6 @@ class create_frame_eval
 public:
 	typedef cons<first_binding, typename rest_bindings::value> value;
 };
-
 template <typename ENV>
 class create_frame_eval<nil, nil, ENV>
 {
@@ -428,70 +509,95 @@ public:
 	typedef nil value;
 };
 
-template <typename FUN, typename ACTUALS, typename ENV>
-class apply;
-
-template <typename FORMALS, typename BODY, typename LEXSP,
-		typename ACTUALS, typename H, typename SP>
-class apply<lambda<FORMALS, BODY, LEXSP>, ACTUALS, env_<H,SP> >
+template <typename FORMALS, typename BODY, typename LEXSP, typename ACTUALS>
+struct apply<lambda<FORMALS, BODY, LEXSP>, ACTUALS>
 {
-	typedef env_<H,SP> ENV;
-	typedef env_<H,LEXSP> LEXENV;
-	typedef typename create_frame_eval<FORMALS, ACTUALS, ENV>::value new_frame;
-	typedef typename push_frame<new_frame, LEXENV>::value subenv;
-	typedef eval<cons<PROGN, BODY>, subenv> result;
-public:
-	typedef typename result::value value;
-	typedef typename re_sp<typename result::env,SP>::value env;
-};
-
-template <typename ENV>
-class apply<PLUS, nil, ENV>
-{
-public:
-	typedef INT(0) value;
-	typedef ENV env;
-};
-
-template <typename ACTUALS, typename ENV>
-class apply<PLUS, ACTUALS, ENV>
-{
-	template<typename A, typename B>
-	struct plus;
-
-	template<int a, int b>
-	struct plus<INT(a), INT(b)>
+	template <typename ENV> struct eval;
+	template <typename H, typename SP> struct eval<env_<H,SP> >
 	{
-		typedef INT(a+b) value;
+		typedef env_<H,SP> ENV;
+		typedef env_<H,LEXSP> LEXENV;
+		typedef typename create_frame_eval<FORMALS, ACTUALS, ENV>::value new_frame;
+		typedef typename push_frame<new_frame, LEXENV>::value subenv;
+		typedef typename BODY::template eval<subenv> result;
+	public:
+		typedef typename result::value value;
+		typedef typename re_sp<typename result::env,SP>::value env;
 	};
-	typedef eval<typename ACTUALS::car, ENV> result_head;
-	typedef apply<PLUS, typename ACTUALS::cdr, typename result_head::env> result_tail;
-public:
-	typedef typename plus<typename result_head::value, typename result_tail::value>::value value;
-	typedef ENV env;
+};
+
+template <typename ACTUALS>
+struct apply<PLUS, ACTUALS>
+{
+	template <typename ENV> struct eval
+	{
+		typedef typename ACTUALS::car::template eval<ENV> result_head;
+		typedef typename apply<PLUS, typename ACTUALS::cdr>::template eval<typename result_head::env> result_tail;
+
+		template<typename A, typename B>
+		struct plus;
+
+		template<int a, int b>
+		struct plus<INT(a), INT(b)>
+		{
+			typedef INT(a+b) value;
+		};
+		typedef typename plus<typename result_head::value, typename result_tail::value>::value value;
+		typedef typename result_tail::env env;
+	};
+};
+
+template <>
+struct apply<PLUS, nil>
+{
+	template <typename ENV> struct eval: pureval<ENV>
+	{
+		typedef INT(0) value;
+	};
 };
 
 // (lambda ...)
-template <typename ARGS, typename BODY, typename ENV>
-class eval<cons<LAMBDA, cons<ARGS, BODY> >, ENV>
+template <typename ARGS, typename BODY>
+class analyze<cons<LAMBDA, cons<ARGS, BODY> > >
 {
 public:
-	typedef lambda<ARGS, BODY, typename ENV::sp> value;
-	typedef ENV env;
+	typedef analyze<cons<PROGN, BODY> > body_analyze;
+	template <typename ENV> struct eval: pureval<ENV>
+	{
+		typedef lambda<ARGS, body_analyze, typename ENV::sp> value;
+	};
 };
 
 // (FUN ACTUALS)
-template <typename FUN, typename ACTUALS, typename ENV>
-class eval<cons<FUN, ACTUALS>, ENV>
+template <typename FUN, typename ACTUALS>
+struct analyze<cons<FUN, ACTUALS> >
 {
-	typedef eval<FUN, ENV> fun;
-	typedef apply<typename fun::value, ACTUALS, typename fun::env> result;
-public:
-	typedef typename result::value value;
-	typedef typename result::env env;
+	typedef typename analyze_many<cons<FUN, ACTUALS> >::value analyzed;
+	typedef typename analyzed::car analyzed_fun;
+	typedef typename analyzed::cdr analyzed_args;
+	template <typename ENV> struct eval
+	{
+		typedef typename analyzed_fun::template eval<ENV> fun;
+		typedef typename apply<typename fun::value, analyzed_args>::template eval<typename fun::env> result;
+		typedef typename result::value value;
+		typedef typename result::env env;
+	};
 };
 
 typedef env_<heap<>,nil> really_empty_env;
-typedef push_frame<nil, really_empty_env>::value empty_env;
-typedef add_binding<PLUS, PLUS, empty_env>::value initial_env;
+typedef push_frame<nil, really_empty_env>::value env0;
+#define reg_prim(prim, e, e2) \
+	typedef add_binding<prim, prim, e>::value e2
+reg_prim(PLUS, env0, env1);
+reg_prim(CAR, env1, env2);
+reg_prim(CDR, env2, env3);
+reg_prim(null, env3, env4);
+typedef env4 initial_env;
 
+template <typename EXPR, typename ENV>
+struct eval
+{
+	typedef typename analyze<EXPR>::template eval<ENV> evaled;
+	typedef typename evaled::value value;
+	typedef typename evaled::env env;
+};

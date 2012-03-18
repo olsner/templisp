@@ -4,7 +4,7 @@ template <typename... T> struct list;
 template <> struct list<>
 { typedef nil value; };
 template <typename X, typename... Xs> struct list<X, Xs...>
-{ typedef cons<X, list<Xs...> > value; };
+{ typedef cons<X, typename list<Xs...>::value > value; };
 
 template <typename CONS>
 struct length
@@ -18,10 +18,6 @@ struct length<nil>
 	static const uint value=0;
 };
 
-/*
-(defun my-reverse (lst &optional (out nil)) 
-  (cond ((null lst) out)
-        (t (my-reverse-aux (rest lst) (cons (first lst) out)))))*/
 template <typename CONS, typename OUT=nil>
 class reverse
 {
