@@ -244,28 +244,8 @@ struct print_val<lambda<ARGS, BODY, ENV> >:
 	print_val<typename append<list<LAMBDA, ARGS>,BODY>::value>
 {};
 
-/*
-	(eval form env)
-	form is a lisp++ form to evaluate
-	env is an association list of variables with their respective values
-*/
 template <typename FORM, typename ENV>
 struct eval;
-
-/* Speed-up macros for common operations */
-
-template <typename LIST>
-struct first
-{
-	typedef typename LIST::car value;
-};
-#define FIRST(...) typename first<__VA_ARGS__>::value
-template <typename LIST>
-struct second
-{
-	typedef FIRST(typename LIST::cdr) value;
-};
-#define SECOND(...) typename second<__VA_ARGS__>::value
 
 // value
 template <typename T, T val, typename ENV>
@@ -295,8 +275,8 @@ struct eval<nil, ENV>
 template <typename REST, typename ENV>
 class eval<cons<CONS, REST>, ENV>
 {
-	typedef eval<FIRST(REST), ENV> fir;
-	typedef eval<SECOND(REST), typename fir::env> sec;
+	typedef eval<typename REST::car, ENV> fir;
+	typedef eval<typename REST::cdr::car, typename fir::env> sec;
 	typedef alloc<typename sec::env, cons<typename fir::value, typename sec::value> > alloced;
 public:
 	typedef typename alloced::value value;
