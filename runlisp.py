@@ -2,8 +2,13 @@
 
 import sys
 import os
+import argparse
 
-special = { '+' : 'PLUS', 'null' : 'null' }
+special = {
+	'+' : 'PLUS',
+	'null' : 'null',
+	'set!' : 'SET',
+}
 
 def isSymChar(c, first = False):
 	return c in '+-/*' or (c >= 'a' and c <= 'z') or (c >= 'A' and c <= 'Z')
@@ -46,37 +51,65 @@ def parse(sexp):
 		int(h, 10)
 		return parseInt(sexp)
 
+def concat(*xs):
+	res = ''
+	for s in xs:
+		if res and res[-1] == '>' and s[0] == '>':
+			res += ' '
+		res += s
+	return res
+
 def p(s):
 	t = type(s)
 	if t is list:
 		if len(s):
-			return 'cons<%s,%s> ' % (p(s[0]), p(s[1:]))
+			return concat('cons<',p(s[0]),',',p(s[1:]),'>')
 		else:
 			return 'nil'
 	elif t is int:
-		return 'value_type<int,%d> ' % s
+		return 'value_type<int,%d>' % s
 	else:
 		return special.get(s, s.upper())
 
-def clang(out, prog):
-	return 'clang++ -o %s "-DPROG=%s" -std=c++0x templ_lisp.cpp' % (out, prog)
-def gcc(out, prog):
-	return 'g++ -o %s "-DPROG=%s" -ftemplate-depth-30 -std=c++0x -Wall -g templ_lisp.cpp 2>&1 | ./filter.sh' % (out, prog)
+clang = 'clang++ -g -o %s "-DPROG=%s" -std=c++0x %s 2>&1'
+gcc = 'g++ -g -o %s "-DPROG=%s" -ftemplate-depth-30 -std=c++0x -Wall %s 2>&1 | ./filter.sh'
 
-args = sys.argv[1:]
-if not args:
-	print >>sys.stderr, "Usage: %s [--clang|--gcc] LISP..." % sys.argv[0]
-	sys.exit(1)
-elif args[0] == '--clang':
-	args = args[1:]
-	compiler = clang
-else:
-	if args[0] == '--gcc':
-		args = args[1:]
-	compiler = gcc
+def run(args, prog):
+	cmd = args.compiler % ('$out', prog, args.shell)
+	if args.output is None:
+		cmd = 'out=`mktemp`; (%s && $out); res=$?; rm -f $out; exit $res' % cmd
+	else:
+		cmd = 'out=\"%s\"; %s' % (args.output, cmd)
+	return os.system(cmd)
+def justPrint(args, prog):
+	print prog
 
-for a in args:
+parser = argparse.ArgumentParser(description="Translate S-expressions to templates and display or compile/interpret using a C++ compiler.")
+parser.add_argument('expressions', metavar='SEXP', type=str, nargs='+',
+	help='an S-expression to translate/compile/interpret')
+
+parser.add_argument('--clang', dest='compiler', action='store_const',
+	const=clang, default=gcc,
+	help='use clang as the C++ compiler')
+parser.add_argument('--gcc', dest='compiler', action='store_const',
+	const=gcc,
+	help='use g++ as the C++ compiler')
+
+parser.add_argument('--print', dest='action', action='store_const',
+	const=justPrint, default=run,
+	help="Don't compile/run, just print the template type corresponding to the S-expressions")
+parser.add_argument('--compile', dest='shell', action='store_const',
+	const='compile.cpp', default='templ_lisp.cpp',
+	help="Compile instead of interpreting")
+
+parser.add_argument('--output', '-o', default=None,
+	help="Save compiled executable to given path (default: compile to a temporary file, remove it afterwards)")
+
+args = parser.parse_args()
+
+compiler = gcc
+
+for a in args.expressions:
 	s,rest = parse(a)
 	assert not len(rest), "Unconsumed input: %r" % (rest)
-	r = os.system('out=`mktemp`; (%s && $out); res=$?; rm -f $out; exit $res' % compiler('$out', p(s)))
-	if r: sys.exit(1)
+	if args.action(args, p(s)): sys.exit(1)
