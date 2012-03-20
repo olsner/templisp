@@ -3,7 +3,7 @@
 0
 >>>= 0
 
-./runlisp.py '(if t 1 0)'
+./runlisp.py '(if (quote t) 1 0)'
 >>>
 1
 >>>= 0

@@ -1,38 +1,38 @@
-./runlisp.py '(progn (set a 5) a)'
+./runlisp.py '(progn (define a 5) a)'
 >>>
 5
 >>>= 0
 
-./runlisp.py '(set a (set b (quote (5 2))))'
+./runlisp.py '(define a (define b (quote (5 2))))'
 >>>
 (5 2)
 >>>= 0
 
 # This should fail, quote takes only one argument
-./runlisp.py '(set a (set b (quote 5 2)))'
+./runlisp.py '(define a (define b (quote 5 2)))'
 >>>= 1
 
-./runlisp.py '(progn (set a (set b (quote (5 2)))) (cons a b))'
+./runlisp.py '(progn (define a (define b (quote (5 2)))) (cons a b))'
 >>>
 ((5 2) 5 2)
 >>>= 0
 
-./runlisp.py '(progn (set a nil) (null a))'
+./runlisp.py '(progn (define a nil) (null a))'
 >>>
 t
 >>>= 0
 
-./runlisp.py '(progn (set a nil) (set b (lambda () a)) (set a (quote t)) (b))'
+./runlisp.py '(progn (define a nil) (define b (lambda () a)) (set a (quote t)) (b))'
 >>>
 t
 >>>= 0
 
-./runlisp.py '(progn (set a nil) (set b (lambda () (set a (quote t)))) (b) a)'
+./runlisp.py '(progn (define a nil) (define b (lambda () (set a (quote t)))) (b) a)'
 >>>
 t
 >>>= 0
 
-./runlisp.py '(progn (set a (cons 1 2)) (set b (lambda (x) (set (cdr x) (quote t)))) (b a) a)'
+./runlisp.py '(progn (define a (cons 1 2)) (define b (lambda (x) (set (cdr x) (quote t)))) (b a) a)'
 >>>
 (1 . t)
 >>>= 0
@@ -50,4 +50,5 @@ t
 ./runlisp.py '(progn (define a (cons 1 2)) (define (b x) (set (cdr x) (quote t))) (b a) a)'
 >>>
 (1 . t)
+>>>2
 >>>= 0

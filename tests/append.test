@@ -1,6 +1,6 @@
 ./runlisp.py '(define (append a b) (if (null a) b (cons (car a) (append (cdr a) b))))'
 >>>
-(lambda (a b))
+<procedure>
 >>>= 0
 
 ./runlisp.py '(progn (define (append a b) (if (null a) b (cons (car a) (append (cdr a) b)))) nil)'

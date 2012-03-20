@@ -62,21 +62,6 @@ struct print_string
 };
 
 /******************************************************
-Bool Printer */
-extern const char str_bool_false[]="false";
-extern const char str_bool_true[]="true";
-
-template <>
-struct print_val<BOOL(false)>:
-	PRINT_STRING(str_bool_false)
-{};
-
-template <>
-struct print_val<BOOL(true)>:
-	PRINT_STRING(str_bool_true)
-{};
-
-/******************************************************
 Cons Printer */
 template <typename VAL>
 struct print_cons;

@@ -7,12 +7,12 @@ BEGIN {
     out=0
 }
 
-/^(templ_lisp|lisp|print|utils|heap)/ {
+/^(templ_lisp|lisp|print|utils|heap|compile|rts)/ {
     printf "\n%s", $0
     out=1
 }
 
-$0 !~ /^(templ_lisp|lisp|print|utils|heap)/ {
+$0 !~ /^(templ_lisp|lisp|print|utils|heap|compile|rts)/ {
     printf "%s", $0
     out=1
 }

@@ -1,3 +1,4 @@
+#include "rts.h"
 #include "utils.h"
 #include "lists.h"
 #include "print.h"
@@ -5,7 +6,9 @@
 
 template <const char *sym_val>
 struct lisp_symbol
-{};
+{
+	static ob reified;
+};
 
 #define SYM(_s) lisp_symbol<lisp_symbol_text_##_s>
 #define DEFINE(_sym, _text) \
@@ -44,6 +47,14 @@ DEFINE(G, "g")
 DEFINE(X, "x")
 DEFINE(APPEND, "append")
 DEFINE(APPEND_2, "append-2")
+
+template <const char *sym_val>
+ob lisp_symbol<sym_val>::reified = obnew(otsymbol, 1, sym_val);
+template <typename CAR, typename CDR>
+ob cons<CAR,CDR>::reified = obnew(otcons, 2, CAR::reified, CDR::reified);
+ob nil::reified = NULL;
+template <typename T, T val>
+ob value_type<T, val>::reified = obnew(otint, 1, (uintptr_t)val);
 
 template <typename HEAP, typename SP>
 struct env_
@@ -239,9 +250,10 @@ struct lambda
 	typedef BODY body;
 	typedef SP sp;
 };
+extern const char print_lambda[]="<procedure>";
 template <typename ARGS, typename BODY, typename ENV>
 struct print_val<lambda<ARGS, BODY, ENV> >:
-	print_val<typename list<LAMBDA, ARGS>::value>
+	PRINT_STRING(print_lambda)
 {};
 
 template <typename EXPR>
@@ -274,6 +286,10 @@ struct analyze<value_type<T, val>>
 	{
 		typedef value_type<T, val> value;
 	};
+	ob ret(ob)
+	{
+		return obnew(otint, 1, (uintptr_t)val);
+	}
 };
 
 // variable (symbol)
@@ -284,6 +300,15 @@ struct analyze<lisp_symbol<SYM> >
 	{
 		typedef typename get_binding<ENV, lisp_symbol<SYM> >::value value;
 	};
+	ob ret(ob env)
+	{
+		return rtsGetBinding(env, SYM);
+	}
+	ob proc(ob env, ob args)
+	{
+		ob p = ret(env);
+		return p->proc(p->env, args);
+	}
 };
 
 // nil
@@ -293,6 +318,10 @@ template <> struct analyze<nil>
 	{
 		typedef nil value;
 	};
+	ob ret(ob)
+	{
+		return NULL;
+	}
 };
 
 // (cons REST)
@@ -311,6 +340,12 @@ public:
 		typedef typename alloced::value value;
 		typedef typename alloced::env env;
 	};
+	ob ret(ob env)
+	{
+		ob car = fir().ret(env);
+		ob cdr = sec().ret(env);
+		return obnew(otcons, 2, car, cdr);
+	}
 };
 
 template <typename ENV, typename V> struct car;
@@ -380,6 +415,11 @@ struct analyze<cons<QUOTE, cons<REST, nil> > >
 	{
 		typedef REST value;
 	};
+
+	ob ret(ob env)
+	{
+		return REST::reified;
+	}
 };
 
 // (if TEST TRUE_CLAUSE FALSE_CLAUSE)
@@ -400,6 +440,10 @@ struct analyze<cons<IF, cons<TEST, cons<T, cons<F, nil> > > > >
 		typedef typename result::value value;
 		typedef typename result::env env;
 	};
+	ob ret(ob env)
+	{
+		return aTest().ret(env) ? aT().ret(env) : aF().ret(env);
+	}
 };
 
 // (set (cdr EXPR) FORM)
@@ -420,6 +464,10 @@ struct analyze<cons<SET,cons<cons<CDR,cons<EXPR,nil> >,cons<FORM,nil> > > >
 		typedef cons<typename oldcons::car, typename form::value> value;
 		typedef typename poke<oldenv, p, value>::value env;
 	};
+	ob ret(ob env)
+	{
+		return aExpr().ret(env)->cdr = aForm().ret(env);
+	}
 };
 
 // (set VAR FORM)
@@ -433,6 +481,12 @@ struct analyze<cons<SET, cons<VAR, cons<FORM, nil> > > >
 		typedef typename result::value value;
 		typedef typename set_binding<VAR, value, typename result::env>::value env;
 	};
+	ob ret(ob env)
+	{
+		ob val = val_analyze().ret(env);
+		rtsSetBinding(env, VAR::reified->sym, val);
+		return val;
+	}
 };
 
 // (define (fun args...) BODY)
@@ -446,6 +500,12 @@ struct analyze<cons<DEFINE, cons<cons<FUN, ARGS>, BODY> > >
 		typedef typename result::value value;
 		typedef typename set_binding<FUN, value, typename result::env>::value env;
 	};
+	ob ret(ob env)
+	{
+		ob val = val_analyze().ret(env);
+		rtsAddBinding(env, obnew(otcons, 2, FUN::reified, val));
+		return val;
+	}
 };
 
 // (define VAR FORM)
@@ -460,6 +520,12 @@ struct analyze<cons<DEFINE, cons<lisp_symbol<NAME>, cons<FORM, nil> > > >
 		typedef typename result::value value;
 		typedef typename set_binding<VAR, value, typename result::env>::value env;
 	};
+	ob ret(ob env)
+	{
+		ob val = val_analyze().ret(env);
+		rtsAddBinding(env, obnew(otcons, 2, lisp_symbol<NAME>::reified, val));
+		return val;
+	}
 };
 
 // (progn FIRST REST...)
@@ -476,6 +542,11 @@ public:
 		typedef typename rest_eval::value value;
 		typedef typename rest_eval::env env;
 	};
+	ob ret(ob env)
+	{
+		first_analyze().ret(env);
+		return rest_analyze().ret(env);
+	}
 };
 // (progn LAST)
 template <typename LAST>
@@ -489,6 +560,10 @@ public:
 		typedef typename last_eval::value value;
 		typedef typename last_eval::env env;
 	};
+	ob ret(ob env)
+	{
+		return last_analyze().ret(env);
+	}
 };
 
 template <typename FORMALS, typename ACTUALS, typename ENV>
@@ -556,6 +631,29 @@ struct apply<PLUS, nil>
 	};
 };
 
+template <typename ARGS>
+struct new_frame;
+
+template <>
+struct new_frame<nil>
+{
+	static ob frame(size_t n, ob*)
+	{
+		assert(n == 0);
+		return NULL;
+	}
+};
+template <typename CAR, typename CDR>
+struct new_frame<cons<CAR,CDR> >
+{
+	static ob frame(size_t n, ob* args)
+	{
+		assert(n > 0);
+		ob bind = obnew(otcons, 2, CAR::reified, *args++);
+		return obnew(otcons, 2, bind, new_frame<CDR>::frame(n - 1, args));
+	}
+};
+
 // (lambda ...)
 template <typename ARGS, typename BODY>
 class analyze<cons<LAMBDA, cons<ARGS, BODY> > >
@@ -566,8 +664,43 @@ public:
 	{
 		typedef lambda<ARGS, body_analyze, typename ENV::sp> value;
 	};
+	static ob proc(ob env, ob args)
+	{
+		ob frame = new_frame<ARGS>::frame(args->val, args->obs + 1);
+		return body_analyze().ret(obnew(otcons, 2, frame, env));
+	}
+	ob ret(ob env)
+	{
+		return obnew(otproc, 2, &proc, env);
+	}
 };
 
+template <typename ARGS> struct arglist;
+template <> struct arglist<nil>
+{
+	enum { size = 0 };
+	void put(ob, ob*) {}
+	ob ret(ob)
+	{
+		return obnew(otvec, 1 + size, size);
+	}
+};
+template <typename CAR, typename CDR>
+struct arglist<cons<CAR,CDR> >
+{
+	enum { size = 1 + arglist<CDR>::size };
+	void put(ob env, ob* target)
+	{
+		*target++ = CAR().ret(env);
+		arglist<CDR>().put(env, target);
+	}
+	ob ret(ob env)
+	{
+		ob res = obnew(otvec, 1 + size, size);
+		put(env, res->obs + 1);
+		return res;
+	}
+};
 // (FUN ACTUALS)
 template <typename FUN, typename ACTUALS>
 struct analyze<cons<FUN, ACTUALS> >
@@ -582,22 +715,10 @@ struct analyze<cons<FUN, ACTUALS> >
 		typedef typename result::value value;
 		typedef typename result::env env;
 	};
-};
 
-typedef env_<heap<>,nil> really_empty_env;
-typedef push_frame<nil, really_empty_env>::value env0;
-#define reg_prim(prim, e, e2) \
-	typedef add_binding<prim, prim, e>::value e2
-reg_prim(PLUS, env0, env1);
-reg_prim(CAR, env1, env2);
-reg_prim(CDR, env2, env3);
-reg_prim(null, env3, env4);
-typedef env4 initial_env;
-
-template <typename EXPR, typename ENV>
-struct eval
-{
-	typedef typename analyze<EXPR>::template eval<ENV> evaled;
-	typedef typename evaled::value value;
-	typedef typename evaled::env env;
+	ob ret(ob env)
+	{
+		ob args = arglist<analyzed_args>().ret(env);
+		return analyzed_fun().proc(env, args);
+	}
 };

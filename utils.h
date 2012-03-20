@@ -46,6 +46,7 @@ struct nil
 {
 	typedef nil car;
 	typedef nil cdr;
+	static ob reified;
 };
 
 template <typename CAR, typename CDR>
@@ -53,21 +54,15 @@ struct cons
 {
 	typedef CAR car;
 	typedef CDR cdr;
+	static ob reified;
 };
 
-/*
-	There are two kinds of values: ones that have an actual c++ constant value,
-	and those that are represented by a type (i.e. conses). c++ constant values
-	are wrapped in this class, other simply use their respective class as the
-	"value type"
-*/
 template <typename T, T val>
 struct value_type
 {
-	typedef T type;
 	static const T value=val;
+	static ob reified;
 };
 
 #define INT(_i) value_type<int, _i>
-#define BOOL(_b) value_type<bool, _b>
 
