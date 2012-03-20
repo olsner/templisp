@@ -7,25 +7,44 @@ import argparse
 special = {
 	'+' : 'PLUS',
 	'null' : 'null',
+	'null?' : 'null',
 	'set!' : 'SET',
 }
 
-def isSymChar(c, first = False):
-	return c in '+-/*' or (c >= 'a' and c <= 'z') or (c >= 'A' and c <= 'Z')
+def isSymChar(c, first):
+	return c in '+-/*?<>!=' or (c >= 'a' and c <= 'z') or (c >= 'A' and c <= 'Z') \
+		or (not first and c >= '0' and c <= '9')
+
+def cppSafe(sym):
+	res = ''
+	for c in sym:
+		if (c >= 'a' and c <= 'z') or (c >= 'A' and c <= 'Z'):
+			res += c
+		else:
+			res += 'x%d'%ord(c)
+	return res
 
 def parseSym(sexp):
 	i = 1
-	while i < len(sexp) and isSymChar(sexp[i]):
+	while i < len(sexp) and isSymChar(sexp[i], False):
 		i += 1
-	return sexp[:i], sexp[i:]
+	return (sexp[:i],), sexp[i:]
+
+def strip(sexp):
+	sexp = sexp.strip()
+	if sexp[0] == ';':
+		i = sexp.find('\n')
+		return strip(sexp[i:])
+	return sexp
 
 def parseList(sexp, allowUnTerm = False):
 	res = []
 	while sexp:
+		sexp = strip(sexp)
 		if sexp[0] == ')': return res, sexp[1:]
 		x, sexp = parse(sexp)
 		res.append(x)
-	assert allowUnTerm, "Unterminated list"
+	assert allowUnTerm, "Unterminated list after %r" % x
 	return res, sexp
 
 def parseInt(sexp):
@@ -40,16 +59,25 @@ def parseInt(sexp):
 	return int(sexp[:n]), sexp[n:]
 
 def parse(sexp):
-	sexp = sexp.strip()
+	sexp = strip(sexp)
 	tail = sexp[1:]
 	h = sexp[0]
 	if h == '(':
 		return parseList(tail)
+	elif h == '"':
+		return tail.split('"',1)
+	elif h == "'":
+		s,rest = parse(tail)
+		return [('quote',), s], rest
 	elif isSymChar(h, True):
 		return parseSym(sexp)
 	else:
-		int(h, 10)
-		return parseInt(sexp)
+		try:
+			int(h, 10)
+			return parseInt(sexp)
+		except:
+			pass
+	assert False, "Unexpected character %r at start of %r" % (h, sexp)
 
 def concat(*xs):
 	res = ''
@@ -68,8 +96,11 @@ def p(s):
 			return 'nil'
 	elif t is int:
 		return 'value_type<int,%d>' % s
-	else:
-		return special.get(s, s.upper())
+	elif t is str:
+		return 'nil/*'+s+'*/'
+	elif t is tuple:
+		s = s[0]
+		return special.get(s, cppSafe(s).upper())
 
 clang = 'clang++ -g -o %s "-DPROG=%s" -std=c++0x %s 2>&1'
 gcc = 'g++ -g -o %s "-DPROG=%s" -ftemplate-depth-30 -std=c++0x -Wall %s 2>&1 | ./filter.sh'
