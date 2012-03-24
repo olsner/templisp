@@ -109,7 +109,7 @@ def p(s):
 		return cooked
 
 clang = 'clang++ -g -std=c++0x -o %s "-DPROG=%s" %s 2>&1'
-gcc = 'g++ -g -ftemplate-depth-90 -std=c++0x -Wall -o %s "-DPROG=%s" %s 2>&1 | ./filter.sh'
+gcc = 'g++ -g -fmessage-length=0 -ftemplate-depth-1000 -std=c++0x -Wall -o %s "-DPROG=%s" %s 2>&1 | ./filter.sh'
 
 def mktemp():
 	import tempfile
