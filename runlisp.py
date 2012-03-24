@@ -97,7 +97,7 @@ def p(s):
 	elif t is int:
 		return 'value_type<int,%d>' % s
 	elif t is str:
-		return 'nil/*'+s+'*/'
+		return 'string<%s>' % ','.join(to_chars(s))
 	elif t is tuple:
 		s = s[0]
 		if s in special:
@@ -107,7 +107,8 @@ def p(s):
 
 def to_chars(s):
 	for c in s:
-		yield "'%c'" % c
+		if c == '\'': c = "\\'"
+		yield "'%s'" % c
 
 clang = 'clang++ -g -std=c++0x -o %s "-DPROG=%s" %s 2>&1'
 gcc = 'g++ -g -fmessage-length=0 -ftemplate-depth-1000 -std=c++0x -Wall -o %s "-DPROG=%s" %s 2>&1 | ./filter.sh'

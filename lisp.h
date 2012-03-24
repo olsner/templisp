@@ -45,6 +45,23 @@ ob nil::reified = NULL;
 template <typename T, T val>
 ob value_type<T, val>::reified = obnew(otint, 1, (uintptr_t)val);
 
+template <char... s>
+struct string
+{
+	static ob reified;
+};
+template <char... sym>
+ob string<sym...>::reified =
+	obnew(otstring, 1, copyinto(malloc(sizeof...(sym) + 1), sym..., 0));
+template <>
+struct print_val<string<> >
+{};
+template <char c, char... s>
+struct print_val<string<c,s...> >:
+	print_val<value_type<char,c> >,
+	print_val<string<s...> >
+{};
+
 template <typename HEAP, typename SP>
 struct env_
 {
@@ -298,6 +315,14 @@ struct analyze<symbol<sym...> >
 		ob p = ret(env);
 		assert(p->tag == otproc);
 		return p->proc(p->env, args);
+	}
+};
+template <char... sym>
+struct analyze<string<sym...> >
+{
+	ob ret(ob env)
+	{
+		return string<sym...>::reified;
 	}
 };
 

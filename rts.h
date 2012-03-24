@@ -8,6 +8,7 @@ enum obtype
 {
 	otnil = 0,
 	otsymbol,
+	otstring,
 	otcons,
 	otproc,
 	otint,
@@ -29,6 +30,7 @@ struct ob_
 		ob ob0;
 		ob obs[NUMINLINEP];
 		const char* sym;
+		const char* str;
 		int val;
 		struct
 		{
@@ -123,6 +125,9 @@ void printob(ob val)
 		break;
 	case otsymbol:
 		printf("%s", val->sym);
+		break;
+	case otstring:
+		printf("%s", val->str);
 		break;
 	case otproc:
 		printf("<procedure>");
