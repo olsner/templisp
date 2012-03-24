@@ -27,12 +27,19 @@ DEFINE(SET, "set")
 DEFINE(LAMBDA, "lambda")
 DEFINE(PROGN, "progn")
 DEFINE(IF, "if")
-//DEFINE(EQ, "eq")
+DEFINE(COND, "cond")
+DEFINE(LET, "let")
+DEFINE(APPLY, "apply")
+DEFINE(LIST, "list")
+DEFINE(EQ, "eq?")
 DEFINE(T, "t");
 DEFINE(null, "null");
 DEFINE(CAR, "car");
 DEFINE(CDR, "cdr");
 DEFINE(PLUS, "+");
+DEFINE(NUMBER, "number?");
+DEFINE(DISPLAY, "display");
+DEFINE(PUTC, "putc");
 typedef nil NIL;
 
 #define INT(_i) value_type<int, _i>
@@ -307,6 +314,7 @@ struct analyze<lisp_symbol<SYM> >
 	ob proc(ob env, ob args)
 	{
 		ob p = ret(env);
+		assert(p->tag == otproc);
 		return p->proc(p->env, args);
 	}
 };
@@ -348,24 +356,34 @@ public:
 	}
 };
 
-template <typename ENV, typename V> struct car;
+template <typename... args> struct car;
 template <typename ENV, typename CAR, typename CDR>
 struct car<ENV, cons<CAR,CDR> >
 {
 	typedef CAR value;
 };
-template <typename ENV, typename P> struct car
+template <typename CAR, typename CDR>
+struct car<cons<CAR,CDR> >
+{
+	typedef CAR value;
+};
+template <typename ENV, typename P> struct car<ENV, P>
 {
 	typedef typename car<ENV, typename peek<ENV, P>::value>::value value;
 };
 
-template <typename ENV, typename V> struct cdr;
+template <typename... args> struct cdr;
 template <typename ENV, typename CAR, typename CDR>
 struct cdr<ENV, cons<CAR,CDR> >
 {
 	typedef CDR value;
 };
-template <typename ENV, typename P> struct cdr
+template <typename CAR, typename CDR>
+struct cdr<cons<CAR,CDR> >
+{
+	typedef CDR value;
+};
+template <typename ENV, typename P> struct cdr<ENV, P>
 {
 	typedef typename cdr<ENV, typename peek<ENV, P>::value>::value value;
 };
@@ -422,6 +440,58 @@ struct analyze<cons<QUOTE, cons<REST, nil> > >
 	}
 };
 
+// (cond)
+template <>
+struct analyze<cons<COND,nil> >
+{
+	ob ret(ob env)
+	{
+		return NULL;
+	}
+};
+
+// (cond (TEST CODE) REST)
+template <typename TEST, typename CODE, typename REST>
+struct analyze<cons<COND,cons<cons<TEST,cons<CODE,nil> >,REST> > >
+{
+	typedef analyze<TEST> aTest;
+	typedef analyze<CODE> aCode;
+	typedef analyze<cons<COND,REST> > aRest;
+	ob ret(ob env)
+	{
+		return aTest().ret(env) ? aCode().ret(env) : aRest().ret(env);
+	}
+};
+
+template<template<typename...> class f, typename LIST>
+struct maptemplate;
+template<template<typename...> class f>
+struct maptemplate<f,nil>
+{
+	typedef nil value;
+};
+template<template<typename...> class f, typename CAR, typename CDR>
+struct maptemplate<f,cons<CAR,CDR> >
+{
+	typedef cons<typename f<CAR>::value, typename maptemplate<f,CDR>::value> value;
+};
+
+// (let VARS BODY)
+template <typename VARS, typename BODY>
+struct analyze<cons<LET,cons<VARS,BODY> > >
+{
+	typedef typename maptemplate<car,VARS>::value formals;
+	typedef typename maptemplate<cdr,VARS>::value cdrs;
+	typedef typename maptemplate<car,cdrs>::value actuals;
+	typedef cons<LAMBDA,cons<formals,BODY> > body;
+	typedef analyze<cons<body,actuals> > a;
+
+	ob ret(ob env)
+	{
+		return a().ret(env);
+	}
+};
+
 // (if TEST TRUE_CLAUSE FALSE_CLAUSE)
 template <typename TEST, typename T, typename F>
 struct analyze<cons<IF, cons<TEST, cons<T, cons<F, nil> > > > >
@@ -464,6 +534,19 @@ struct analyze<cons<SET,cons<cons<CDR,cons<EXPR,nil> >,cons<FORM,nil> > > >
 		typedef cons<typename oldcons::car, typename form::value> value;
 		typedef typename poke<oldenv, p, value>::value env;
 	};
+	ob ret(ob env)
+	{
+		return aExpr().ret(env)->cdr = aForm().ret(env);
+	}
+};
+
+// (set (car EXPR) FORM)
+template <typename EXPR, typename FORM>
+struct analyze<cons<SET,cons<cons<CAR,cons<EXPR,nil> >,cons<FORM,nil> > > >
+{
+	typedef analyze<EXPR> aExpr;
+	typedef analyze<FORM> aForm;
+
 	ob ret(ob env)
 	{
 		return aExpr().ret(env)->cdr = aForm().ret(env);

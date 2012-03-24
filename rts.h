@@ -73,6 +73,17 @@ static inline ob obnew(obtype type, size_t size, T... values)
 	return r;
 }
 
+static void rtsAbort(const char* format, ...) __attribute__((noreturn));
+static void rtsAbort(const char* format, ...)
+{
+	va_list ap;
+	va_start(ap, format);
+	vfprintf(stderr, format, ap);
+	va_end(ap);
+	fprintf(stderr, "\n");
+	abort();
+}
+
 void printob(ob val);
 
 void printobcons(ob val)
@@ -117,7 +128,7 @@ void printob(ob val)
 		printf("<procedure>");
 		break;
 	default:
-		assert(false);
+		rtsAbort("printob: unhandled type %d in %p", val->tag, val);
 	}
 }
 
@@ -140,7 +151,7 @@ ob& rtsGetBinding(ob env, const char* sym)
 		}
 		env = env->cdr;
 	}
-	abort();
+	rtsAbort("No binding found for \"%s\"!", sym);
 }
 
 void rtsSetBinding(ob env, const char* sym, ob value)

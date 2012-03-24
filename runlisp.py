@@ -9,9 +9,11 @@ special = {
 	'null' : 'null',
 	'null?' : 'null',
 	'set!' : 'SET',
+	'number?' : 'NUMBER',
+	'eq?' : 'EQ',
 }
 symbols = {}
-presymbols = set("cons quote define set set! lambda progn if t null null? car cdr + nil a b c d f g x append append-2".split())
+presymbols = set("cons quote define set set! lambda progn if t null null? car cdr + nil a b c d f g x append append-2 number? cond let apply list eq? display putc".split())
 
 def isSymChar(c, first):
 	return c in '+-/*?<>!=' or (c >= 'a' and c <= 'z') or (c >= 'A' and c <= 'Z') \
