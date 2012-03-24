@@ -1,9 +1,10 @@
 #include "lisp.h"
 #include "compile.h"
 
+PROG
+
 int main()
 {
-	typedef PROG prog;
 	ob res = eval(prog());
 	
 	printob(res);

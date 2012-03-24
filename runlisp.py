@@ -10,6 +10,8 @@ special = {
 	'null?' : 'null',
 	'set!' : 'SET',
 }
+symbols = {}
+presymbols = set("cons quote define set set! lambda progn if t null null? car cdr + nil a b c d f g x append append-2".split())
 
 def isSymChar(c, first):
 	return c in '+-/*?<>!=' or (c >= 'a' and c <= 'z') or (c >= 'A' and c <= 'Z') \
@@ -100,18 +102,39 @@ def p(s):
 		return 'nil/*'+s+'*/'
 	elif t is tuple:
 		s = s[0]
-		return special.get(s, cppSafe(s).upper())
+		cooked = special.get(s, cppSafe(s).upper())
+		symbols[s] = cooked
+		return cooked
 
-clang = 'clang++ -g -o %s "-DPROG=%s" -std=c++0x %s 2>&1'
-gcc = 'g++ -g -o %s "-DPROG=%s" -ftemplate-depth-30 -std=c++0x -Wall %s 2>&1 | ./filter.sh'
+clang = 'clang++ -g -std=c++0x -o %s "-DPROG=%s" %s 2>&1'
+gcc = 'g++ -g -ftemplate-depth-90 -std=c++0x -Wall -o %s "-DPROG=%s" %s 2>&1 | ./filter.sh'
+
+def mktemp():
+	import tempfile
+	h = tempfile.NamedTemporaryFile(delete = False)
+	name = h.name
+	h.close()
+	return name
 
 def run(args, prog):
-	cmd = args.compiler % ('$out', prog, args.shell)
+	prog='typedef '+prog+' prog;'
+	for k,v in symbols.iteritems():
+		if k in presymbols: continue
+		prog = 'DEFINE(%s,\\"%s\\");' % (v, k) + prog
 	if args.output is None:
-		cmd = 'out=`mktemp`; (%s && $out); res=$?; rm -f $out; exit $res' % cmd
+		out = mktemp()
+		temp = out
 	else:
-		cmd = 'out=\"%s\"; %s' % (args.output, cmd)
-	return os.system(cmd)
+		out = args.output
+		temp = None
+	cmd = args.compiler % (out, prog, args.shell)
+	try:
+		r = os.system(cmd)
+		if r: return r
+		return os.system(out)
+		print cmd
+	finally:
+		if temp: os.unlink(temp)
 def justPrint(args, prog):
 	print prog
 
