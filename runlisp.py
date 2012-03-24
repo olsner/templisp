@@ -5,15 +5,11 @@ import os
 import argparse
 
 special = {
-	'+' : 'PLUS',
+	# TODO Should be handled by adding a mapping from the symbol nil to the special nil value instead
+	'nil' : 'nil',
 	'null' : 'null',
-	'null?' : 'null',
-	'set!' : 'SET',
-	'number?' : 'NUMBER',
-	'eq?' : 'EQ',
+	'set' : 'SET',
 }
-symbols = {}
-presymbols = set("cons quote define set set! lambda progn if t null null? car cdr + nil a b c d f g x append append-2 number? cond let apply list eq? display putc".split())
 
 def isSymChar(c, first):
 	return c in '+-/*?<>!=' or (c >= 'a' and c <= 'z') or (c >= 'A' and c <= 'Z') \
@@ -104,9 +100,14 @@ def p(s):
 		return 'nil/*'+s+'*/'
 	elif t is tuple:
 		s = s[0]
-		cooked = special.get(s, cppSafe(s).upper())
-		symbols[s] = cooked
-		return cooked
+		if s in special:
+			return special.get(s)
+		else:
+			return 'symbol<%s>' % ','.join(to_chars(s))
+
+def to_chars(s):
+	for c in s:
+		yield "'%c'" % c
 
 clang = 'clang++ -g -std=c++0x -o %s "-DPROG=%s" %s 2>&1'
 gcc = 'g++ -g -fmessage-length=0 -ftemplate-depth-1000 -std=c++0x -Wall -o %s "-DPROG=%s" %s 2>&1 | ./filter.sh'
@@ -120,9 +121,6 @@ def mktemp():
 
 def run(args, prog):
 	prog='typedef '+prog+' prog;'
-	for k,v in symbols.iteritems():
-		if k in presymbols: continue
-		prog = 'DEFINE(%s,\\"%s\\");' % (v, k) + prog
 	if args.output is None:
 		out = mktemp()
 		temp = out
@@ -134,7 +132,6 @@ def run(args, prog):
 		r = os.system(cmd)
 		if r: return r
 		return os.system(out)
-		print cmd
 	finally:
 		if temp: os.unlink(temp)
 def justPrint(args, prog):

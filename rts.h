@@ -133,8 +133,9 @@ void printob(ob val)
 }
 
 
-ob& rtsGetBinding(ob env, const char* sym)
+ob& rtsGetBinding(ob env, ob symob)
 {
+	const char* sym = symob->sym;
 	while (env)
 	{
 		assert(env->tag == otcons);
@@ -154,7 +155,7 @@ ob& rtsGetBinding(ob env, const char* sym)
 	rtsAbort("No binding found for \"%s\"!", sym);
 }
 
-void rtsSetBinding(ob env, const char* sym, ob value)
+void rtsSetBinding(ob env, ob sym, ob value)
 {
 	rtsGetBinding(env, sym) = value;
 }

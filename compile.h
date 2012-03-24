@@ -82,6 +82,8 @@ ob prim_EQ(ob, ob args)
 	{
 	case otint:
 		if (a->val == b->val) goto eq;
+	default:
+		;
 	}
 	return NULL;
 eq:

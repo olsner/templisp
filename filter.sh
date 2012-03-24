@@ -3,13 +3,17 @@
 # Operates on stdin and stdout only
 
 C_TO_LISP='
-s/lisp_symbol \?<((const char\*)(& lisp_symbol_text_\([a-zA-Z_][a-zA-Z_0-9]*\)))>/\1/g
 s/\(struct \)\?value_type<\([a-z]*\), \([0-9]*\)>/\3/g
 s/\([a-z_]*\)</(\1 /g
 s/, / /g
 s/\([ ]*\)>/)/g
 s/`(/(/g
-s/)[^)]*$/)/g'
+s/)[^)]*$/)/g
+:replace_symbol
+    s/\(symbol[^) ]*\) '"'"'\(.\)'"'"'\( '"'"'\|)\)/\1\2\3/
+    t replace_symbol
+s/(symbol\([^)]*\))/"\1"/g
+'
 
 CONS_TO_LIST='
 s/[ ]\+\([^ ]\+\)/ \1/g

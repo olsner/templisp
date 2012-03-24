@@ -4,59 +4,41 @@
 #include "print.h"
 #include "heap.h"
 
-template <const char *sym_val>
-struct lisp_symbol
+template <char... sym>
+struct symbol
 {
 	static ob reified;
 };
+static inline void* copyinto(void* target)
+{
+	return target;
+}
+template <typename T, typename... Ts>
+static inline void* copyinto(void* target, T arg1, Ts... args)
+{
+	T* p = (T*)target;
+	*p++ = arg1;
+	copyinto(p, args...);
+	return target;
+}
+// A bit annoying that we can't compile-time generate constant strings here...
+template <char... sym>
+ob symbol<sym...>::reified =
+	obnew(otsymbol, 1, copyinto(malloc(sizeof...(sym) + 1), sym..., 0));
+template <char c, char... cs>
+struct print_val<symbol<c, cs...> >:
+	print_val<value_type<char, c> >,
+	print_val<symbol<cs...> >
+{};
+template <>
+struct print_val<symbol<> >
+{};
 
-#define SYM(_s) lisp_symbol<lisp_symbol_text_##_s>
-#define DEFINE(_sym, _text) \
-	extern const char lisp_symbol_text_##_sym[]=_text; \
-	template <> \
-	struct print_val<lisp_symbol<lisp_symbol_text_##_sym> > \
-	{ \
-		PRINT_STRING(lisp_symbol_text_##_sym) text; \
-	}; \
-	typedef SYM(_sym) _sym;
-
-DEFINE(CONS, "cons")
-DEFINE(QUOTE, "quote")
-DEFINE(DEFINE, "define")
-DEFINE(SET, "set")
-DEFINE(LAMBDA, "lambda")
-DEFINE(PROGN, "progn")
-DEFINE(IF, "if")
-DEFINE(COND, "cond")
-DEFINE(LET, "let")
-DEFINE(APPLY, "apply")
-DEFINE(LIST, "list")
-DEFINE(EQ, "eq?")
-DEFINE(T, "t");
-DEFINE(null, "null");
-DEFINE(CAR, "car");
-DEFINE(CDR, "cdr");
-DEFINE(PLUS, "+");
-DEFINE(NUMBER, "number?");
-DEFINE(DISPLAY, "display");
-DEFINE(PUTC, "putc");
 typedef nil NIL;
-
 #define INT(_i) value_type<int, _i>
 
-// User Symbols
-DEFINE(A, "a")
-DEFINE(B, "b")
-DEFINE(C, "c")
-DEFINE(D, "d")
-DEFINE(F, "f")
-DEFINE(G, "g")
-DEFINE(X, "x")
-DEFINE(APPEND, "append")
-DEFINE(APPEND_2, "append-2")
+#include "symbols.h"
 
-template <const char *sym_val>
-ob lisp_symbol<sym_val>::reified = obnew(otsymbol, 1, sym_val);
 template <typename CAR, typename CDR>
 ob cons<CAR,CDR>::reified = obnew(otcons, 2, CAR::reified, CDR::reified);
 ob nil::reified = NULL;
@@ -300,16 +282,16 @@ struct analyze<value_type<T, val>>
 };
 
 // variable (symbol)
-template <const char *SYM>
-struct analyze<lisp_symbol<SYM> >
+template <char... sym>
+struct analyze<symbol<sym...> >
 {
 	template <typename ENV> struct eval: pureval<ENV>
 	{
-		typedef typename get_binding<ENV, lisp_symbol<SYM> >::value value;
+		typedef typename get_binding<ENV, symbol<sym...> >::value value;
 	};
 	ob ret(ob env)
 	{
-		return rtsGetBinding(env, SYM);
+		return rtsGetBinding(env, symbol<sym...>::reified);
 	}
 	ob proc(ob env, ob args)
 	{
@@ -567,7 +549,7 @@ struct analyze<cons<SET, cons<VAR, cons<FORM, nil> > > >
 	ob ret(ob env)
 	{
 		ob val = val_analyze().ret(env);
-		rtsSetBinding(env, VAR::reified->sym, val);
+		rtsSetBinding(env, VAR::reified, val);
 		return val;
 	}
 };
@@ -592,10 +574,10 @@ struct analyze<cons<DEFINE, cons<cons<FUN, ARGS>, BODY> > >
 };
 
 // (define VAR FORM)
-template <const char* NAME, typename FORM>
-struct analyze<cons<DEFINE, cons<lisp_symbol<NAME>, cons<FORM, nil> > > >
+template <char... NAME, typename FORM>
+struct analyze<cons<DEFINE, cons<symbol<NAME...>, cons<FORM, nil> > > >
 {
-	typedef lisp_symbol<NAME> VAR;
+	typedef symbol<NAME...> VAR;
 	typedef analyze<FORM> val_analyze;
 	template <typename ENV> struct eval
 	{
@@ -606,7 +588,7 @@ struct analyze<cons<DEFINE, cons<lisp_symbol<NAME>, cons<FORM, nil> > > >
 	ob ret(ob env)
 	{
 		ob val = val_analyze().ret(env);
-		rtsAddBinding(env, obnew(otcons, 2, lisp_symbol<NAME>::reified, val));
+		rtsAddBinding(env, obnew(otcons, 2, symbol<NAME...>::reified, val));
 		return val;
 	}
 };
