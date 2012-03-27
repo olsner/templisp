@@ -27,17 +27,37 @@ ob prim_null(ob, ob args)
 	return args->obs[1] ? NULL : T::reified;
 }
 
+static ob is_type(ob arg, obtype tag)
+{
+	return arg && arg->tag == tag ? T::reified : NULL;
+}
+
 ob prim_NUMBER(ob, ob args)
 {
-	return args->obs[1]->tag == otint ? T::reified : NULL;
+	return is_type(args->obs[1], otint);
+}
+
+ob prim_STRING(ob, ob args)
+{
+	return is_type(args->obs[1], otstring);
+}
+
+ob prim_SYMBOL(ob, ob args)
+{
+	return is_type(args->obs[1], otsymbol);
+}
+
+ob prim_PAIR(ob, ob args)
+{
+	return is_type(args->obs[1], otcons);
 }
 
 #define forvec(entry, vec) \
 	for (ob forvec__vec = (vec), \
 			*forvec__start = forvec__vec->obs + 1, \
 			*forvec__end = forvec__start + forvec__vec->val, \
-			entry = *forvec__start; \
-		forvec__start < forvec__end; \
+			entry; \
+		forvec__start < forvec__end && (entry = *forvec__start, true); \
 		entry = *++forvec__start)
 
 ob prim_PLUS(ob, ob args)
@@ -77,6 +97,7 @@ ob prim_EQ(ob, ob args)
 	ob b = args->obs[2];
 
 	if (a == b) goto eq;
+	if (!a || !b) return NULL;
 	if (a->tag != b->tag) return 0;
 	switch (a->tag)
 	{
@@ -93,6 +114,7 @@ eq:
 ob prim_DISPLAY(ob, ob args)
 {
 	printob(args->obs[1]);
+	printf("\n");
 	return NULL;
 }
 
@@ -100,6 +122,13 @@ ob prim_PUTC(ob, ob args)
 {
 	putchar(args->obs[1]->val);
 	return NULL;
+}
+ob prim_GETC(ob, ob args)
+{
+	int c = getchar();
+	printf("getc: %d!\n", c);
+	if (c == -1) return NULL;
+	return obnew(otint, 1, c);
 }
 
 template <typename T>
@@ -119,7 +148,11 @@ reg_prim(APPLY),
 reg_prim(LIST),
 reg_prim(EQ),
 reg_prim(DISPLAY),
-reg_prim(PUTC)
+reg_prim(PUTC),
+reg_prim(GETC),
+reg_prim(STRING),
+reg_prim(SYMBOL),
+reg_prim(PAIR)
 		>::value>::value::reified;
 
 	return analyze<T>().ret(env);
