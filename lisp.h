@@ -13,10 +13,10 @@ static inline void* copyinto(void* target)
 {
 	return target;
 }
-template <typename T, typename... Ts>
-static inline void* copyinto(void* target, T arg1, Ts... args)
+template <typename... Ts>
+static inline void* copyinto(void* target, char arg1, Ts... args)
 {
-	T* p = (T*)target;
+	char* p = (char*)target;
 	*p++ = arg1;
 	copyinto(p, args...);
 	return target;
