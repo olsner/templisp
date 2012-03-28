@@ -9,8 +9,10 @@ special = {
 	'string?' : 'STRING',
 	'symbol?' : 'SYMBOL',
 	'pair?' : 'PAIR',
+	'list->symbol' : 'LIST_TO_SYM',
+	'list->string' : 'LIST_TO_STRING',
 }
-presymbols = "cons quote define set! lambda progn if t car cdr + cond let apply list eq? display putc getc null? number? string? symbol? pair?".split()
+presymbols = "cons quote define set! lambda progn if t car cdr + cond let apply list eq? display putc getc null? number? string? symbol? pair? list->symbol list->string".split()
 
 def cppSafe(sym):
 	res = ''

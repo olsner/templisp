@@ -147,6 +147,22 @@ ob prim_GETC(ob, ob args)
 	return obnew(otint, 1, c);
 }
 
+ob prim_LIST_TO_STRING(ob, ob args)
+{
+	ob arg = args->obs[1];
+	size_t length = (list_length(arg) + sizeof(void*) - 1) / sizeof(void*);
+	ob res = obnew(otstring, 1 + length, (uintptr_t)0);
+	char* p = (char*)&res->ptrs[1];
+	res->str = p;
+	while (arg)
+	{
+		assert(arg->car && arg->car->tag == otint);
+		*p++ = arg->car->val;
+		arg = arg->cdr;
+	}
+	return res;
+}
+
 template <typename T>
 ob eval(const T&)
 {
@@ -168,7 +184,8 @@ reg_prim(PUTC),
 reg_prim(GETC),
 reg_prim(STRING),
 reg_prim(SYMBOL),
-reg_prim(PAIR)
+reg_prim(PAIR),
+reg_prim(LIST_TO_STRING)
 		>::value>::value::reified;
 
 	return analyze<T>().ret(env);

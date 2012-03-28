@@ -23,3 +23,5 @@ typedef symbol<'n','u','m','b','e','r','?'> NUMBER;
 typedef symbol<'s','t','r','i','n','g','?'> STRING;
 typedef symbol<'s','y','m','b','o','l','?'> SYMBOL;
 typedef symbol<'p','a','i','r','?'> PAIR;
+typedef symbol<'l','i','s','t','-','>','s','y','m','b','o','l'> LIST_TO_SYM;
+typedef symbol<'l','i','s','t','-','>','s','t','r','i','n','g'> LIST_TO_STRING;
