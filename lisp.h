@@ -556,7 +556,7 @@ struct analyze<cons<SET,cons<cons<CAR,cons<EXPR,nil> >,cons<FORM,nil> > > >
 
 	ob ret(ob env)
 	{
-		return aExpr().ret(env)->cdr = aForm().ret(env);
+		return aExpr().ret(env)->car = aForm().ret(env);
 	}
 };
 
