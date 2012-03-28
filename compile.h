@@ -71,11 +71,27 @@ ob prim_PLUS(ob, ob args)
 	return obnew(otint, 1, res);
 }
 
+size_t list_length(ob arg, size_t acc = 0)
+{
+	if (!arg || arg->tag != otcons)
+		return acc;
+	else
+		return list_length(arg->cdr, acc + 1);
+}
+
 ob prim_APPLY(ob, ob args)
 {
 	ob proc = args->obs[1];
-	args->val--;
-	memmove(args->obs + 1, args->obs + 2, sizeof(ob) * args->val);
+	ob arglist = args->obs[2];
+	size_t nargs =  list_length(arglist);
+	args = obnew(otvec, 1 + nargs, nargs);
+	ob* p = &args->obs[1];
+	while (arglist)
+	{
+		assert(arglist->tag == otcons);
+		*p++ = arglist->car;
+		arglist = arglist->cdr;
+	}
 	return proc->proc(proc->env, args);
 }
 
