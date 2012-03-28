@@ -10,12 +10,12 @@
     c))
 (define (ungetc c) (set! *buf-char* c))
 
-(define (read) '(cons 1 2))
-(define (read2)
+(define (read)
   (let ((c (whitespace-getc)))
     (cond
       ((= c 40) (read-list)) ; '('
-      ((symbol-char1 c) (let ((sym (cons c (read-symbol)))) (display sym) sym))
+      ((= c 39) (list 'quote (read)))
+      ((symbol-char1 c) (let ((sym (list->symbol (cons c (read-symbol))))) (display sym) sym))
       ((elem c digits) (read-number c))
       ((null? c) (error "eof" c))
       (else (progn (display (cons "read fallback" c)) c)))))
