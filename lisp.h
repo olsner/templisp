@@ -24,7 +24,7 @@ static inline void* copyinto(void* target, char arg1, Ts... args)
 // A bit annoying that we can't compile-time generate constant strings here...
 template <char... sym>
 ob symbol<sym...>::reified =
-	obnew(otsymbol, 1, copyinto(malloc(sizeof...(sym) + 1), sym..., 0));
+	regsym(obnew(otsymbol, 1, copyinto(malloc(sizeof...(sym) + 1), sym..., 0)));
 template <char c, char... cs>
 struct print_val<symbol<c, cs...> >:
 	print_val<value_type<char, c> >,

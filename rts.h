@@ -3,6 +3,9 @@
 #include <stdarg.h>
 #include <assert.h>
 #include <stdio.h>
+#include <string.h>
+
+#include <set>
 
 enum obtype
 {
@@ -48,6 +51,33 @@ struct ob_
 static bool eqsym(ob o, const char* sym)
 {
 	return o->tag == otsymbol && o->sym == sym;
+}
+
+struct less_sym
+{
+	bool operator()(ob a, ob b)
+	{
+		assert(a->tag == otsymbol && b->tag == otsymbol);
+		return a != b && strcmp(a->sym, b->sym) < 0;
+	}
+};
+
+static std::set<ob, less_sym> symset;
+
+static ob regsym(ob sym)
+{
+	symset.insert(sym);
+	return sym;
+}
+
+static ob getsym(ob sym)
+{
+	auto it = symset.find(sym);
+	if (it == symset.end())
+	{
+		return regsym(sym);
+	}
+	return *it;
 }
 
 static ob oballoc(obtype type, size_t size)

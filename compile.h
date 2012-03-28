@@ -144,7 +144,7 @@ ob prim_GETC(ob, ob args)
 	int c = getchar();
 	printf("getc: %d!\n", c);
 	if (c == -1) return NULL;
-	return obnew(otint, 1, c);
+	return obnew(otint, 1, (uintptr_t)c);
 }
 
 ob prim_LIST_TO_STRING(ob, ob args)
@@ -161,6 +161,13 @@ ob prim_LIST_TO_STRING(ob, ob args)
 		arg = arg->cdr;
 	}
 	return res;
+}
+
+ob prim_LIST_TO_SYM(ob, ob args)
+{
+	ob str = prim_LIST_TO_STRING(NULL, args);
+	str->tag = otsymbol;
+	return getsym(str);
 }
 
 template <typename T>
@@ -185,6 +192,7 @@ reg_prim(GETC),
 reg_prim(STRING),
 reg_prim(SYMBOL),
 reg_prim(PAIR),
+reg_prim(LIST_TO_SYM),
 reg_prim(LIST_TO_STRING)
 		>::value>::value::reified;
 
