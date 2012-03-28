@@ -132,7 +132,10 @@ def run(args, prog):
 	try:
 		r = os.system(cmd)
 		if r: return r
-		return os.system(out)
+		if args.compile_only:
+			return 0
+		else:
+			return os.system(out)
 	finally:
 		if temp: os.unlink(temp)
 def justPrint(args, prog):
@@ -155,6 +158,8 @@ parser.add_argument('--print', dest='action', action='store_const',
 parser.add_argument('--compile', dest='shell', action='store_const',
 	const='compile.cpp', default='templ_lisp.cpp',
 	help="Compile instead of interpreting")
+parser.add_argument('--compile-only', action='store_true', default=False,
+	help="Don't run after compiling")
 
 parser.add_argument('--output', '-o', default=None,
 	help="Save compiled executable to given path (default: compile to a temporary file, remove it afterwards)")

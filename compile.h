@@ -142,7 +142,6 @@ ob prim_PUTC(ob, ob args)
 ob prim_GETC(ob, ob args)
 {
 	int c = getchar();
-	printf("getc: %d!\n", c);
 	if (c == -1) return NULL;
 	return obnew(otint, 1, (uintptr_t)c);
 }

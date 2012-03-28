@@ -5,7 +5,9 @@
 #include <stdio.h>
 #include <string.h>
 
+#ifdef COMPILER
 #include <set>
+#endif
 
 enum obtype
 {
@@ -62,6 +64,7 @@ struct less_sym
 	}
 };
 
+#ifdef COMPILER
 static std::set<ob, less_sym> symset;
 
 static ob regsym(ob sym)
@@ -79,6 +82,12 @@ static ob getsym(ob sym)
 	}
 	return *it;
 }
+#else
+static ob regsym(ob sym)
+{
+	return sym;
+}
+#endif
 
 static ob oballoc(obtype type, size_t size)
 {
