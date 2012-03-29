@@ -52,14 +52,6 @@ ob prim_PAIR(ob, ob args)
 	return is_type(args->obs[1], otcons);
 }
 
-#define forvec(entry, vec) \
-	for (ob forvec__vec = (vec), \
-			*forvec__start = forvec__vec->obs + 1, \
-			*forvec__end = forvec__start + forvec__vec->val, \
-			entry; \
-		forvec__start < forvec__end && (entry = *forvec__start, true); \
-		entry = *++forvec__start)
-
 ob prim_PLUS(ob, ob args)
 {
 	int res = 0;

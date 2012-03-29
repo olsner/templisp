@@ -144,6 +144,14 @@ void printobcons(ob val)
 	}
 }
 
+#define forvec(entry, vec) \
+	for (ob forvec__vec = (vec), \
+			*forvec__start = forvec__vec->obs + 1, \
+			*forvec__end = forvec__start + forvec__vec->val, \
+			entry; \
+		forvec__start < forvec__end && (entry = *forvec__start, true); \
+		entry = *++forvec__start)
+
 void printob(ob val)
 {
 	if (!val)
@@ -171,11 +179,19 @@ void printob(ob val)
 	case otproc:
 		printf("<procedure>");
 		break;
+	case otvec:
+		printf("{ ");
+		forvec(entry, val)
+		{
+			printob(entry);
+			printf(" ");
+		}
+		printf("}");
+		break;
 	default:
 		rtsAbort("printob: unhandled type %d in %p", val->tag, val);
 	}
 }
-
 
 ob& rtsGetBinding(ob env, ob symob)
 {
