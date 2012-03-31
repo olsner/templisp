@@ -1,54 +1,61 @@
-./runlisp.py '(progn (define a 5) a)'
+./runlisp.py "(progn (define a 5) a)"
 >>>
 5
 >>>= 0
 
-./runlisp.py '(define a (define b (quote (5 2))))'
+./runlisp.py "(progn (define b (quote (5 2))) (define a b) a)"
 >>>
 (5 2)
 >>>= 0
 
-# This should fail, quote takes only one argument
-./runlisp.py '(define a (define b (quote 5 2)))'
->>>= 1
-
-./runlisp.py '(progn (define a (define b (quote (5 2)))) (cons a b))'
+./runlisp.py "(progn (define b (quote (5 2))) (define a b) (cons a b))"
 >>>
 ((5 2) 5 2)
 >>>= 0
 
-./runlisp.py '(progn (define a nil) (null a))'
+./runlisp.py "(progn (define a '()) (null? a))"
 >>>
 t
 >>>= 0
 
-./runlisp.py '(progn (define a nil) (define b (lambda () a)) (set! a (quote t)) (b))'
+./runlisp.py "(progn (define a '()) (define b (lambda () a)) (set! a (quote t)) (b))"
 >>>
 t
 >>>= 0
 
-./runlisp.py '(progn (define a nil) (define b (lambda () (set! a (quote t)))) (b) a)'
+./runlisp.py "(progn (define a '()) (define b (lambda () (set! a (quote t)))) (b) a)"
 >>>
 t
 >>>= 0
 
-./runlisp.py '(progn (define a (cons 1 2)) (define b (lambda (x) (set! (cdr x) (quote t)))) (b a) a)'
+./runlisp.py "(progn (define a '()) (define (b) a) (set! a (quote t)) (b))"
+>>>
+t
+>>>= 0
+
+./runlisp.py "(progn (define a '()) (define (b) (set! a (quote t))) (b) a)"
+>>>
+t
+>>>= 0
+
+./runlisp.py "(progn (define a (cons 1 2)) (define b (lambda (x) (set! (cdr x) 't))) (b a) a)"
 >>>
 (1 . t)
 >>>= 0
 
-./runlisp.py '(progn (define a nil) (define (b) a) (set! a (quote t)) (b))'
->>>
-t
->>>= 0
-
-./runlisp.py '(progn (define a nil) (define (b) (set! a (quote t))) (b) a)'
->>>
-t
->>>= 0
-
-./runlisp.py '(progn (define a (cons 1 2)) (define (b x) (set! (cdr x) (quote t))) (b a) a)'
+./runlisp.py "(progn (define a (cons 1 2)) (define (b x) (set! (cdr x) (quote t))) (b a) a)"
 >>>
 (1 . t)
+>>>2
+>>>= 0
+
+./runlisp.py "(progn (define a (cons 1 2)) (define b (lambda (x) (set! (car x) 't))) (b a) a)"
+>>>
+(t . 2)
+>>>= 0
+
+./runlisp.py "(progn (define a (cons 1 2)) (define (b x) (set! (car x) (quote t))) (b a) a)"
+>>>
+(t . 2)
 >>>2
 >>>= 0

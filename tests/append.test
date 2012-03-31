@@ -3,7 +3,7 @@
 <procedure>
 >>>= 0
 
-./runlisp.py '(progn (define (append a b) (if (null? a) b (cons (car a) (append (cdr a) b)))) nil)'
+./runlisp.py "(progn (define (append a b) (if (null? a) b (cons (car a) (append (cdr a) b)))) '())"
 >>>
 nil
 >>>= 0
@@ -18,17 +18,17 @@ nil
 (1 4 5 6)
 >>>= 0
 
-./runlisp.py '(progn (define (append a b) (if (null? a) b (cons (car a) (append (cdr a) b)))) (append nil (quote (1))))'
+./runlisp.py "(progn (define (append a b) (if (null? a) b (cons (car a) (append (cdr a) b)))) (append '() (quote (1))))"
 >>>
 (1)
 >>>= 0
 
-./runlisp.py '(progn (define (append a b) (if (null? a) b (cons (car a) (append (cdr a) b)))) (append (quote (1)) nil))'
+./runlisp.py "(progn (define (append a b) (if (null? a) b (cons (car a) (append (cdr a) b)))) (append '(1) '()))"
 >>>
 (1)
 >>>= 0
 
-./runlisp.py '(progn (define (append a b) (if (null? a) b (cons (car a) (append (cdr a) b)))) (append nil nil))'
+./runlisp.py "(progn (define (append a b) (if (null? a) b (cons (car a) (append (cdr a) b)))) (append '() '()))"
 >>>
 nil
 >>>= 0

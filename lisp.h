@@ -554,6 +554,17 @@ struct analyze<cons<SET,cons<cons<CAR,cons<EXPR,nil> >,cons<FORM,nil> > > >
 	typedef analyze<EXPR> aExpr;
 	typedef analyze<FORM> aForm;
 
+	template <typename ENV> struct eval
+	{
+		typedef typename aExpr::template eval<ENV> expr;
+		typedef typename aForm::template eval<typename expr::env> form;
+
+		typedef typename expr::value p;
+		typedef typename form::env oldenv;
+		typedef typename peek<oldenv, p>::value oldcons;
+		typedef cons<typename form::value, typename oldcons::cdr> value;
+		typedef typename poke<oldenv, p, value>::value env;
+	};
 	ob ret(ob env)
 	{
 		return aExpr().ret(env)->car = aForm().ret(env);
