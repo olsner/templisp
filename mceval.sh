@@ -14,6 +14,9 @@ else
 	else
 		r "-o ./mceval --compile-only" "(read-eval)" || exit 1
 	fi
+	if [ "$1" = -b ]; then
+		exit 0
+	fi
 	for a in "$@"; do
 		echo "$a" | ./mceval 2>&1 || exit 1
 	done

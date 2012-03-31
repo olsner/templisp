@@ -128,5 +128,8 @@
 
 (define (read-eval-print)
   (user-print (eval (read) the-global-environment)))
+
+(define (user-print-filter object)
+  (if (compound-procedure? object) "<procedure>" object))
 (define (read-eval)
-  (eval (read) the-global-environment))
+  (user-print-filter (eval (read) the-global-environment)))
