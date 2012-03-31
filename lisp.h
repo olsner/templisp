@@ -459,10 +459,10 @@ struct analyze<cons<COND,nil> >
 
 // (cond (TEST CODE) REST)
 template <typename TEST, typename CODE, typename REST>
-struct analyze<cons<COND,cons<cons<TEST,cons<CODE,nil> >,REST> > >
+struct analyze<cons<COND,cons<cons<TEST,CODE>,REST> > >
 {
 	typedef analyze<TEST> aTest;
-	typedef analyze<CODE> aCode;
+	typedef analyze<cons<PROGN,CODE> > aCode;
 	typedef analyze<cons<COND,REST> > aRest;
 	ob ret(ob env)
 	{
