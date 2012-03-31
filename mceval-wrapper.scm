@@ -16,7 +16,7 @@
       ((= c 40) (read-list)) ; '('
       ((= c 39) (list 'quote (read)))
       ((symbol-char1 c) (list->symbol (cons c (read-symbol))))
-      ((elem c digits) (read-number c))
+      ((elem c digits) (list->number (read-number c)))
       ((null? c) (error "eof" c))
       (else (error "Unexpected character" c)))))
 (define (read-list)
@@ -49,8 +49,7 @@
       (else (progn (ungetc c) nil)))))
 (define (read-number c)
   (let ((n (lookc)))
-    (if (elem n digits) (cons c (read-number n)) (list c))
-    c))
+    (if (elem n digits) (cons c (read-number (getc))) (list c))))
 
 (define (whitespace-getc)
   (let ((c (getc)))
@@ -80,6 +79,13 @@
 (define (symbol-char1 c) (elem c symbol-chars1))
 (define (symbol-charn c) (if (symbol-char1 c) 't (elem c symbol-charsn)))
 
+(define (list->number cs)
+  (define (go acc cs)
+    (cond
+      ((null? cs) acc)
+      (else       (go (+ (* 10 acc) (car cs) 4294967248) (cdr cs)))))
+  (go 0 cs))
+
 (define (map fun list)
   (if (null? list) nil (cons (fun (car list)) (map fun (cdr list)))))
 (define (caadr x) (car (cadr x)))
@@ -106,12 +112,25 @@
     ((eq? (car list) x) 't)
     (else (elem x (cdr list)))))
 
+(define (append a b)
+  (cond
+    ((null? a) b)
+    (else      (cons (car a) (append (cdr a) b)))))
+
 ; Ought to change the other interpreters and the test cases to use begin
 ; instead.
 (define (begin? exp)
   (or (tagged-list? exp 'begin) (tagged-list? exp 'progn)))
 
 (define (error msg exp) (display msg) (display exp) (abort))
+
+(define primitive-procedures
+  (append
+    primitive-procedures
+    (list (list '+ +)
+          (list '* *)
+          ;;      more primitives
+          )))
 
 ; from ch4-mceval.scm
 (define the-global-environment (setup-environment))
