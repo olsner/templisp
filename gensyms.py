@@ -2,6 +2,7 @@
 
 special = {
 	'+' : 'PLUS',
+	'*' : 'MULTIPLY',
 	'null?' : 'null',
 	'set!' : 'SET',
 	'number?' : 'NUMBER',
@@ -12,7 +13,7 @@ special = {
 	'list->symbol' : 'LIST_TO_SYM',
 	'list->string' : 'LIST_TO_STRING',
 }
-presymbols = "cons quote define set! lambda progn if t car cdr + cond let apply list eq? display putc getc null? number? string? symbol? pair? list->symbol list->string".split()
+presymbols = "cons quote define set! lambda progn if t car cdr + * cond let apply list eq? display putc getc null? number? string? symbol? pair? list->symbol list->string".split()
 
 def cppSafe(sym):
 	res = ''

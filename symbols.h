@@ -13,6 +13,7 @@ typedef symbol<'t'> T;
 typedef symbol<'c','a','r'> CAR;
 typedef symbol<'c','d','r'> CDR;
 typedef symbol<'+'> PLUS;
+typedef symbol<'*'> MULTIPLY;
 typedef symbol<'c','o','n','d'> COND;
 typedef symbol<'l','e','t'> LET;
 typedef symbol<'a','p','p','l','y'> APPLY;

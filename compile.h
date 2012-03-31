@@ -63,6 +63,17 @@ ob prim_PLUS(ob, ob args)
 	return obnew(otint, 1, res);
 }
 
+ob prim_MULTIPLY(ob, ob args)
+{
+	int res = 1;
+	forvec(arg, args)
+	{
+		assert(arg->tag == otint);
+		res *= arg->val;
+	}
+	return obnew(otint, 1, res);
+}
+
 size_t list_length(ob arg, size_t acc = 0)
 {
 	if (!arg || arg->tag != otcons)
@@ -169,6 +180,7 @@ ob eval(const T&)
 
 	ob env = list<list<
 reg_prim(PLUS),
+reg_prim(MULTIPLY),
 reg_prim(CAR),
 reg_prim(CDR),
 reg_prim(CONS),
