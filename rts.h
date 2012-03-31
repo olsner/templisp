@@ -150,7 +150,7 @@ void printobcons(ob val)
 			*forvec__end = forvec__start + forvec__vec->val, \
 			entry; \
 		forvec__start < forvec__end && (entry = *forvec__start, true); \
-		entry = *++forvec__start)
+		forvec__start++)
 
 void printob(ob val)
 {
