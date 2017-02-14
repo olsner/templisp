@@ -11,13 +11,13 @@ into S-expressions, run your compiler output through `filter.sh`.
 
 ## Evaluating expressions inline
 
-`runlisp.py` converts incoming S-expressions into template typedefs and inserts
-them into the interpreter or compiler. See `./runlisp.py --help` for usage and
-more flags.
+`runlisp.py` converts S-expressions from the command line into template
+typedefs and inserts them into the interpreter or compiler. See `./runlisp.py
+--help` for usage and more flags.
 
 ## Compiling and running the metacircular evaluator from SICP
 
-`mceval.sh` wraps `runlisp --compile` to compile and launch the metacircular
+`mceval.sh` wraps `runlisp.py --compile` to compile and launch the metacircular
 evaluator. It'll take a while to compile on first run, and will then print `;;;
 M-Eval` when it is ready for input.
 
