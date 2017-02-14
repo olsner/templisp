@@ -6,8 +6,8 @@ evaluated into new template types, or compiled into C++ code with a minimal
 
 ## Dealing with error messages
 
-Template errors are notoriously difficult to read. To translate STL types back
-into S-expressions, run your compiler output through `filter.sh`.
+Template errors are notoriously difficult to read. To translate the template
+types back into S-expressions, run your compiler output through `filter.sh`.
 
 ## Evaluating expressions inline
 
