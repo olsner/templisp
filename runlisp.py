@@ -110,8 +110,8 @@ def to_chars(s):
 		if c == '\'': c = "\\'"
 		yield "'%s'" % c
 
-clang = 'clang++ -g -std=c++0x -o %s "-DPROG=%s" %s 2>&1'
-gcc = 'g++ -g -fmessage-length=0 -ftemplate-depth-1000 -std=c++0x -Wall -o %s "-DPROG=%s" %s 2>&1 | ./filter.sh'
+clang = 'clang++ -g -std=c++11 -o %s "-DPROG=%s" %s 2>&1'
+gcc = 'g++ -g -fmessage-length=0 -ftemplate-depth-1000 -std=c++11 -Wall -o %s "-DPROG=%s" %s 2>&1 | ./filter.sh'
 
 def mktemp():
 	import tempfile
