@@ -83,7 +83,7 @@
   (define (go acc cs)
     (cond
       ((null? cs) acc)
-      (else       (go (+ (* 10 acc) (car cs) 4294967248) (cdr cs)))))
+      (else       (go (+ (* 10 acc) (car cs) -48) (cdr cs)))))
   (go 0 cs))
 
 (define (map fun list)
