@@ -1,3 +1,4 @@
+namespace {
 
 /**************************************************************
 Value Printers */
@@ -133,3 +134,4 @@ struct print_val<nil>:
 	public print_nil
 {};
 
+}

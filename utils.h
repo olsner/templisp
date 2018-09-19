@@ -1,3 +1,5 @@
+namespace {
+
 typedef unsigned int uint;
 
 template <typename T, bool b, T true_val, T false_val>
@@ -66,3 +68,4 @@ struct value_type
 
 #define INT(_i) value_type<int, _i>
 
+}

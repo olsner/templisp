@@ -1,4 +1,4 @@
-#include <string.h>
+namespace {
 
 template <typename... T> struct list;
 template <> struct list<>
@@ -58,3 +58,4 @@ struct append<list<Xs...>, B>
 	typedef typename append<typename list<Xs...>::value, B>::value value;
 };
 
+}

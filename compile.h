@@ -1,3 +1,4 @@
+namespace {
 
 template <ob proc(ob env, ob args)>
 struct prim
@@ -202,3 +203,4 @@ reg_prim(LIST_TO_STRING)
 	return analyze<T>().ret(env);
 }
 
+}

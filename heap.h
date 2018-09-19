@@ -1,3 +1,5 @@
+namespace {
+
 template <typename... T>
 struct heap
 {};
@@ -180,3 +182,5 @@ struct print_env:
 	print<typename deepeek<ENV, V>::value>
 {
 };
+
+}

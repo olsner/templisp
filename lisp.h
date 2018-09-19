@@ -4,6 +4,7 @@
 #include "print.h"
 #include "heap.h"
 
+namespace {
 template <char... sym>
 struct symbol
 {
@@ -823,3 +824,5 @@ struct analyze<cons<FUN, ACTUALS> >
 		return analyzed_fun().proc(env, args);
 	}
 };
+
+}

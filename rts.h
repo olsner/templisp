@@ -9,6 +9,8 @@
 #include <set>
 #endif
 
+namespace {
+
 enum obtype
 {
 	otnil = 0,
@@ -224,3 +226,5 @@ void rtsAddBinding(ob env, ob binding)
 {
 	env->car = obnew(otcons, 2, binding, env->car);
 }
+
+} // namespace
