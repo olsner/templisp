@@ -1,5 +1,5 @@
 testing2() {
-	echo Testing "$1"
+	echo "Testing $1 -- $2"
 	time shelltest -cad --with "$2" tests -- -j4 || exit 1
 }
 
