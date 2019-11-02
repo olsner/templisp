@@ -78,19 +78,14 @@ template <typename ENV>
 class pop_frame
 {
 public:
-	typedef typename ENV::cdr value;
+	typedef cdr_t<ENV> value;
 };
 
 template <typename FORMALS, typename VALUES, typename ENV>
-class bind_parameters
+struct bind_parameters
 {
-	typedef bind_parameters<typename FORMALS::cdr,
-							typename VALUES::cdr,
-							ENV> rest_bindings;
-public:
-	typedef add_binding<car_t<FORMALS>,
-						car_t<VALUES>,
-						rest_bindings> value;
+	using rest_bindings = bind_parameters<cdr_t<FORMALS>, cdr_t<VALUES>, ENV>;
+	using value = add_binding<car_t<FORMALS>, car_t<VALUES>, rest_bindings>;
 };
 
 template <typename ENV>
@@ -155,7 +150,7 @@ struct get_binding_int
 
 	typedef typename select_type<
 		same_type<frameres, no_binding_error<SYM> >::value,
-		typename get_binding_int<ENV, typename sp::cdr, SYM>::value,
+		typename get_binding_int<ENV, cdr_t<sp>, SYM>::value,
 		frameres>::type value;
 };
 
@@ -174,11 +169,11 @@ struct set_binding
 	typedef typename get_frame_binding<car_t<sp>, SYM>::value get_res;
 
 	typedef typename set_frame_binding<car_t<sp>, SYM, VAL>::value frameres;
-	typedef cons<frameres, typename sp::cdr> new_frame;
+	typedef cons<frameres, cdr_t<sp>> new_frame;
 
 	using value = typename select_type<
 		same_type<get_res, no_binding_error<SYM> >::value,
-		typename set_binding<ENV, typename sp::cdr, SYM, VAL>::value,
+		typename set_binding<ENV, cdr_t<sp>, SYM, VAL>::value,
 		poke_t<ENV, SP, new_frame>>::type;
 };
 template <typename ENV, typename SYM, typename VAL>
@@ -486,7 +481,7 @@ struct analyze<cons<SET,cons<cons<CAR,cons<EXPR,nil> >,cons<FORM,nil> > > >
 		typedef typename expr::value p;
 		typedef typename form::env oldenv;
 		typedef peek_t<oldenv, p> oldcons;
-		typedef cons<typename form::value, typename oldcons::cdr> value;
+		typedef cons<typename form::value, cdr_t<oldcons>> value;
 		typedef poke_t<oldenv, p, value> env;
 	};
 	ob ret(ob env)
@@ -591,16 +586,18 @@ public:
 	}
 };
 
+template <typename FORMALS, typename ACTUALS, typename ENV> class create_frame_eval;
+template <typename FORMALS, typename ACTUALS, typename ENV>
+using create_frame_eval_t = typename create_frame_eval<FORMALS, ACTUALS, ENV>::value;
+
 template <typename FORMALS, typename ACTUALS, typename ENV>
 class create_frame_eval
 {
 	using result = typename car_t<ACTUALS>::template eval<ENV>;
-	typedef cons<car_t<FORMALS>, typename result::value> first_binding;
-	typedef create_frame_eval<typename FORMALS::cdr,
-							  typename ACTUALS::cdr,
-							  typename result::env> rest_bindings;
+	using first = cons<car_t<FORMALS>, typename result::value>;
+	using rest = create_frame_eval_t<cdr_t<FORMALS>, cdr_t<ACTUALS>, typename result::env>;
 public:
-	typedef cons<first_binding, typename rest_bindings::value> value;
+	using value = cons<first, rest>;
 };
 template <typename ENV>
 class create_frame_eval<nil, nil, ENV>
@@ -615,9 +612,9 @@ struct apply<lambda<FORMALS, BODY, LEXSP>, ACTUALS>
 	template <typename ENV> struct eval;
 	template <typename H, typename SP> struct eval<env_<H,SP> >
 	{
-		typedef env_<H,SP> ENV;
-		typedef env_<H,LEXSP> LEXENV;
-		typedef typename create_frame_eval<FORMALS, ACTUALS, ENV>::value new_frame;
+		using ENV = env_<H,SP>;
+		using LEXENV = env_<H,LEXSP>;
+		using new_frame = create_frame_eval_t<FORMALS, ACTUALS, ENV>;
 		typedef typename push_frame<new_frame, LEXENV>::value subenv;
 		typedef typename BODY::template eval<subenv> result;
 	public:
@@ -632,7 +629,7 @@ struct apply<PLUS, ACTUALS>
 	template <typename ENV> struct eval
 	{
 		typedef typename car_t<ACTUALS>::template eval<ENV> result_head;
-		typedef typename apply<PLUS, typename ACTUALS::cdr>::template eval<typename result_head::env> result_tail;
+		typedef typename apply<PLUS, cdr_t<ACTUALS>>::template eval<typename result_head::env> result_tail;
 
 		template<typename A, typename B> struct plus;
 		template<typename A, typename B> using plus_t = typename plus<A, B>::value;
@@ -733,7 +730,7 @@ struct analyze<cons<FUN, ACTUALS>>
 {
 	typedef analyze_many_t<cons<FUN, ACTUALS>> analyzed;
 	typedef car_t<analyzed> analyzed_fun;
-	typedef typename analyzed::cdr analyzed_args;
+	typedef cdr_t<analyzed> analyzed_args;
 	template <typename ENV> struct eval
 	{
 		typedef typename analyzed_fun::template eval<ENV> fun;
