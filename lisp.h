@@ -18,14 +18,13 @@ struct env_
 template <typename H, typename SP, typename P>
 struct peek<env_<H,SP>,P>
 {
-	typedef peek<H, P> peeked;
-	typedef typename peeked::value value;
+    using value = peek_t<H, P>;
 };
+
 template <typename H, typename SP, typename P, typename V>
 struct poke<env_<H,SP>,P,V>
 {
-	typedef poke<H, P, V> poked;
-	typedef env_<typename poked::value,SP> value;
+    using value = env_<poke_t<H, P, V>, SP>;
 };
 template <typename H, typename SP, typename V>
 struct alloc<env_<H,SP>,V>
@@ -44,24 +43,26 @@ struct re_sp<env_<H,O>,SP>
 	typedef env_<H,SP> value;
 };
 
-template <typename F, typename ENV>
-struct set_frame;
+template <typename F, typename ENV> struct set_frame;
 template <typename F, typename H, typename SP>
 struct set_frame<F, env_<H,SP> >
 {
 	typedef env_<H,SP> env;
-	typedef typename peek<env, SP>::value::cdr cdr;
-	typedef typename poke<env, SP, cons<F,cdr> >::value value;
+	using cdr = cdr_t<peek_t<env, SP>>;
+    using value = poke_t<env, SP, cons<F,cdr> >;
 };
 template <typename SYM, typename VAL, typename ENV>
 class add_binding
 {
 	typedef typename ENV::sp sp;
-	typedef typename peek<ENV, sp>::value::car first_frame;
+	typedef car_t<peek_t<ENV, sp>> first_frame;
 	typedef cons<cons<SYM,VAL>,first_frame> new_first_frame;
 public:
 	typedef typename set_frame<new_first_frame, ENV>::value value;
 };
+
+template <typename SYM, typename VAL, typename ENV>
+using add_binding_t = typename add_binding<SYM, VAL, ENV>::value;
 
 template <typename FRAME, typename ENV>
 class push_frame;
@@ -88,8 +89,8 @@ class bind_parameters
 							typename VALUES::cdr,
 							ENV> rest_bindings;
 public:
-	typedef add_binding<typename FORMALS::car,
-						typename VALUES::car,
+	typedef add_binding<car_t<FORMALS>,
+						car_t<VALUES>,
 						rest_bindings> value;
 };
 
@@ -101,9 +102,6 @@ struct bind_parameters<nil, nil, ENV>
 
 template <typename SYM>
 struct no_binding_error;
-
-template <typename ENV, typename SYM>
-struct get_binding;
 
 template <typename FRAME, typename SYM>
 struct get_frame_binding;
@@ -153,8 +151,8 @@ struct get_binding_int<ENV, nil, SYM>
 template <typename ENV, typename SP, typename SYM>
 struct get_binding_int
 {
-	typedef typename peek<ENV, SP>::value sp;
-	typedef typename get_frame_binding<typename sp::car, SYM>::value frameres;
+	typedef peek_t<ENV, SP> sp;
+	typedef typename get_frame_binding<car_t<sp>, SYM>::value frameres;
 
 	typedef typename select_type<
 		same_type<frameres, no_binding_error<SYM> >::value,
@@ -163,35 +161,31 @@ struct get_binding_int
 };
 
 template <typename ENV, typename SYM>
-struct get_binding
-{
-	typedef typename get_binding_int<ENV, typename ENV::sp, SYM>::value value;
-};
+using get_binding_t = typename get_binding_int<ENV, typename ENV::sp, SYM>::value;
 
 template <typename ENV, typename SP, typename SYM, typename VAL>
-struct set_binding_int
-{
-	typedef typename peek<ENV, SP>::value sp;
-	typedef typename get_frame_binding<typename sp::car, SYM>::value get_res;
-
-	typedef typename set_frame_binding<typename sp::car, SYM, VAL>::value frameres;
-	typedef cons<frameres, typename sp::cdr> new_frame;
-
-	typedef typename select_type<
-		same_type<get_res, no_binding_error<SYM> >::value,
-		typename set_binding_int<ENV, typename sp::cdr, SYM, VAL>::value,
-		typename poke<ENV, SP, new_frame>::value>::type value;
-};
-template <typename ENV, typename SYM, typename VAL>
-struct set_binding_int<ENV,nil,SYM,VAL>
-{
-	typedef typename add_binding<SYM,VAL,ENV>::value value;
-};
-
+struct set_binding;
 template <typename SYM, typename VAL, typename ENV>
+using set_binding_t = typename set_binding<ENV, typename ENV::sp, SYM, VAL>::value;
+
+template <typename ENV, typename SP, typename SYM, typename VAL>
 struct set_binding
 {
-	typedef typename set_binding_int<ENV, typename ENV::sp, SYM, VAL>::value value;
+	typedef peek_t<ENV, SP> sp;
+	typedef typename get_frame_binding<car_t<sp>, SYM>::value get_res;
+
+	typedef typename set_frame_binding<car_t<sp>, SYM, VAL>::value frameres;
+	typedef cons<frameres, typename sp::cdr> new_frame;
+
+	using value = typename select_type<
+		same_type<get_res, no_binding_error<SYM> >::value,
+		typename set_binding<ENV, typename sp::cdr, SYM, VAL>::value,
+		poke_t<ENV, SP, new_frame>>::type;
+};
+template <typename ENV, typename SYM, typename VAL>
+struct set_binding<ENV,nil,SYM,VAL>
+{
+	using value = add_binding_t<SYM,VAL,ENV>;
 };
 
 
@@ -208,20 +202,18 @@ struct print_val<lambda<ARGS, BODY, ENV> >:
 	PRINT_STRING(print_lambda)
 {};
 
-template <typename EXPR>
-struct analyze;
-template <typename FUN, typename ACTUALS>
-class apply;
+template<typename EXPR> struct analyze;
+template<typename FUN, typename ACTUALS> struct apply;
 
-template <typename T>
-struct analyze_many;
+template <typename T> struct analyze_many;
+template<typename T> using analyze_many_t = typename analyze_many<T>::value;
 
 template <typename CAR, typename CDR>
 struct analyze_many<cons<CAR,CDR> >
 {
-	typedef cons<analyze<CAR>, typename analyze_many<CDR>::value> value;
+	using value = cons<analyze<CAR>, analyze_many_t<CDR>>;
 };
-template <> struct analyze_many<nil> { typedef nil value; };
+template <> struct analyze_many<nil> { using value = nil; };
 
 // Helpers for evaluations without side-effects
 template <typename ENV>
@@ -250,7 +242,7 @@ struct analyze<symbol<sym...> >
 {
 	template <typename ENV> struct eval: pureval<ENV>
 	{
-		typedef typename get_binding<ENV, symbol<sym...> >::value value;
+		using value = get_binding_t<ENV, symbol<sym...>>;
 	};
 	ob ret(ob env)
 	{
@@ -322,7 +314,7 @@ struct car<cons<CAR,CDR> >
 };
 template <typename ENV, typename P> struct car<ENV, P>
 {
-	typedef typename car<ENV, typename peek<ENV, P>::value>::value value;
+	typedef typename car<ENV, peek_t<ENV, P>>::value value;
 };
 
 template <typename... args> struct cdr;
@@ -338,7 +330,7 @@ struct cdr<cons<CAR,CDR> >
 };
 template <typename ENV, typename P> struct cdr<ENV, P>
 {
-	typedef typename cdr<ENV, typename peek<ENV, P>::value>::value value;
+	typedef typename cdr<ENV, peek_t<ENV, P>>::value value;
 };
 
 // (car ARG)
@@ -483,9 +475,9 @@ struct analyze<cons<SET,cons<cons<CDR,cons<EXPR,nil> >,cons<FORM,nil> > > >
 
 		typedef typename expr::value p;
 		typedef typename form::env oldenv;
-		typedef typename peek<oldenv, p>::value oldcons;
-		typedef cons<typename oldcons::car, typename form::value> value;
-		typedef typename poke<oldenv, p, value>::value env;
+		typedef peek_t<oldenv, p> oldcons;
+		typedef cons<car_t<oldcons>, typename form::value> value;
+		typedef poke_t<oldenv, p, value> env;
 	};
 	ob ret(ob env)
 	{
@@ -507,9 +499,9 @@ struct analyze<cons<SET,cons<cons<CAR,cons<EXPR,nil> >,cons<FORM,nil> > > >
 
 		typedef typename expr::value p;
 		typedef typename form::env oldenv;
-		typedef typename peek<oldenv, p>::value oldcons;
+		typedef peek_t<oldenv, p> oldcons;
 		typedef cons<typename form::value, typename oldcons::cdr> value;
-		typedef typename poke<oldenv, p, value>::value env;
+		typedef poke_t<oldenv, p, value> env;
 	};
 	ob ret(ob env)
 	{
@@ -526,7 +518,7 @@ struct analyze<cons<SET, cons<VAR, cons<FORM, nil> > > >
 	{
 		typedef typename val_analyze::template eval<ENV> result;
 		typedef typename result::value value;
-		typedef typename set_binding<VAR, value, typename result::env>::value env;
+		typedef set_binding_t<VAR, value, typename result::env> env;
 	};
 	ob ret(ob env)
 	{
@@ -545,7 +537,7 @@ struct analyze<cons<DEFINE, cons<cons<FUN, ARGS>, BODY> > >
 	{
 		typedef typename val_analyze::template eval<ENV> result;
 		typedef typename result::value value;
-		typedef typename set_binding<FUN, value, typename result::env>::value env;
+		typedef set_binding_t<FUN, value, typename result::env> env;
 	};
 	ob ret(ob env)
 	{
@@ -565,7 +557,7 @@ struct analyze<cons<DEFINE, cons<symbol<NAME...>, cons<FORM, nil> > > >
 	{
 		typedef typename val_analyze::template eval<ENV> result;
 		typedef typename result::value value;
-		typedef typename set_binding<VAR, value, typename result::env>::value env;
+		typedef set_binding_t<VAR, value, typename result::env> env;
 	};
 	ob ret(ob env)
 	{
@@ -616,8 +608,8 @@ public:
 template <typename FORMALS, typename ACTUALS, typename ENV>
 class create_frame_eval
 {
-	typedef typename ACTUALS::car::template eval<ENV> result;
-	typedef cons<typename FORMALS::car, typename result::value> first_binding;
+	using result = typename car_t<ACTUALS>::template eval<ENV>;
+	typedef cons<car_t<FORMALS>, typename result::value> first_binding;
 	typedef create_frame_eval<typename FORMALS::cdr,
 							  typename ACTUALS::cdr,
 							  typename result::env> rest_bindings;
@@ -653,18 +645,19 @@ struct apply<PLUS, ACTUALS>
 {
 	template <typename ENV> struct eval
 	{
-		typedef typename ACTUALS::car::template eval<ENV> result_head;
+		typedef typename car_t<ACTUALS>::template eval<ENV> result_head;
 		typedef typename apply<PLUS, typename ACTUALS::cdr>::template eval<typename result_head::env> result_tail;
 
-		template<typename A, typename B>
-		struct plus;
+		template<typename A, typename B> struct plus;
+		template<typename A, typename B> using plus_t = typename plus<A, B>::value;
 
 		template<int a, int b>
 		struct plus<INT(a), INT(b)>
 		{
 			typedef INT(a+b) value;
 		};
-		typedef typename plus<typename result_head::value, typename result_tail::value>::value value;
+
+		typedef plus_t<typename result_head::value, typename result_tail::value> value;
 		typedef typename result_tail::env env;
 	};
 };
@@ -733,7 +726,7 @@ template <> struct arglist<nil>
 	}
 };
 template <typename CAR, typename CDR>
-struct arglist<cons<CAR,CDR> >
+struct arglist<cons<CAR,CDR>>
 {
 	enum { size = 1 + arglist<CDR>::size };
 	void put(ob env, ob* target)
@@ -750,10 +743,10 @@ struct arglist<cons<CAR,CDR> >
 };
 // (FUN ACTUALS)
 template <typename FUN, typename ACTUALS>
-struct analyze<cons<FUN, ACTUALS> >
+struct analyze<cons<FUN, ACTUALS>>
 {
-	typedef typename analyze_many<cons<FUN, ACTUALS> >::value analyzed;
-	typedef typename analyzed::car analyzed_fun;
+	typedef analyze_many_t<cons<FUN, ACTUALS>> analyzed;
+	typedef car_t<analyzed> analyzed_fun;
 	typedef typename analyzed::cdr analyzed_args;
 	template <typename ENV> struct eval
 	{
