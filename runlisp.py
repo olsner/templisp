@@ -111,7 +111,7 @@ def to_chars(s):
 		yield "'%s'" % c
 
 clang = 'clang++ -Os -g -std=c++11 -o %s "-DPROG=%s" %s 2>&1'
-gcc = 'g++ -Os -g -fmessage-length=0 -ftemplate-depth-1000 -std=c++11 -Wall -o %s "-DPROG=%s" %s 2>&1 | ./filter.sh'
+gcc = 'g++ -Os -g -fmessage-length=0 -ftemplate-depth-1000 -std=c++11 -Wall -Wno-unused-variable -Wno-unused-function -o %s "-DPROG=%s" %s 2>&1 | ./filter.sh'
 
 def mktemp():
 	import tempfile
