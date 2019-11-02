@@ -29,4 +29,5 @@ typedef symbol<'s','y','m','b','o','l','?'> SYMBOL;
 typedef symbol<'p','a','i','r','?'> PAIR;
 typedef symbol<'l','i','s','t','-','>','s','y','m','b','o','l'> LIST_TO_SYM;
 typedef symbol<'l','i','s','t','-','>','s','t','r','i','n','g'> LIST_TO_STRING;
+typedef symbol<'a','b','o','r','t'> ABORT;
 #endif

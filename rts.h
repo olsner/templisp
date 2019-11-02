@@ -71,8 +71,11 @@ static std::set<ob, less_sym> symset;
 
 static ob regsym(ob sym)
 {
-	symset.insert(sym);
-	return sym;
+    const auto [it, inserted] = symset.insert(sym);
+    if (!inserted) {
+        // Perhaps free the symbol since we're returning another one? Or wait for a GC.
+    }
+    return *it;
 }
 
 static ob getsym(ob sym)

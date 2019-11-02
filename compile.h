@@ -1,12 +1,10 @@
+#include "reify.h"
+#include "symbols.h"
+
 namespace {
 
-template <ob proc(ob env, ob args)>
-struct prim
-{
-	static ob reified;
-};
-template <ob proc(ob env, ob args)>
-ob prim<proc>::reified = obnew(otproc, 2, proc, NULL);
+template<ob proc(ob env, ob args)> struct prim {};
+template<ob proc(ob env, ob args)> struct reify<prim<proc>> { static ob value() { return obnew(otproc, 2, proc, NULL); } };
 
 ob prim_CAR(ob, ob args)
 {
@@ -25,12 +23,12 @@ ob prim_CONS(ob, ob args)
 
 ob prim_null(ob, ob args)
 {
-	return args->obs[1] ? NULL : T::reified;
+	return args->obs[1] ? NULL : reified<T>;
 }
 
 static ob is_type(ob arg, obtype tag)
 {
-	return arg && arg->tag == tag ? T::reified : NULL;
+	return arg && arg->tag == tag ? reified<T> : NULL;
 }
 
 ob prim_NUMBER(ob, ob args)
@@ -128,7 +126,7 @@ ob prim_EQ(ob, ob args)
 	}
 	return NULL;
 eq:
-	return T::reified;
+	return reified<T>;
 }
 
 ob prim_DISPLAY(ob, ob args)
@@ -173,13 +171,19 @@ ob prim_LIST_TO_SYM(ob, ob args)
 	return getsym(str);
 }
 
+ob prim_ABORT(ob, ob)
+{
+    abort();
+}
+
 template <typename T>
 ob eval(const T&)
 {
 #define reg_prim(p) \
 	cons<p, prim<prim_##p> >
 
-	ob env = list<list<
+	ob env = reified<list<list<
+reg_prim(ABORT),
 reg_prim(PLUS),
 reg_prim(MULTIPLY),
 reg_prim(CAR),
@@ -198,7 +202,7 @@ reg_prim(SYMBOL),
 reg_prim(PAIR),
 reg_prim(LIST_TO_SYM),
 reg_prim(LIST_TO_STRING)
-		>::value>::value::reified;
+		>::value>::value>;
 
 	return analyze<T>().ret(env);
 }

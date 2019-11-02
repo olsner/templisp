@@ -3,60 +3,10 @@
 #include "lists.h"
 #include "print.h"
 #include "heap.h"
+#include "reify.h"
 
 namespace {
-static inline void* copyinto(void* target)
-{
-	return target;
-}
-template <typename... Ts>
-static inline void* copyinto(void* target, char arg1, Ts... args)
-{
-	char* p = (char*)target;
-	*p++ = arg1;
-	copyinto(p, args...);
-	return target;
-}
-// A bit annoying that we can't compile-time generate constant strings here...
-template <char... sym>
-ob symbol<sym...>::reified =
-	regsym(obnew(otsymbol, 1, copyinto(malloc(sizeof...(sym) + 1), sym..., 0)));
-template <char c, char... cs>
-struct print_val<symbol<c, cs...> >:
-	print_val<value_type<char, c> >,
-	print_val<symbol<cs...> >
-{};
-template <>
-struct print_val<symbol<> >
-{};
-
-typedef nil NIL;
-#define INT(_i) value_type<int, _i>
-
 #include "symbols.h"
-
-template <typename CAR, typename CDR>
-ob cons<CAR,CDR>::reified = obnew(otcons, 2, CAR::reified, CDR::reified);
-ob nil::reified = NULL;
-template <typename T, T val>
-ob value_type<T, val>::reified = obnew(otint, 1, (uintptr_t)val);
-
-template <char... s>
-struct string
-{
-	static ob reified;
-};
-template <char... sym>
-ob string<sym...>::reified =
-	obnew(otstring, 1, copyinto(malloc(sizeof...(sym) + 1), sym..., 0));
-template <>
-struct print_val<string<> >
-{};
-template <char c, char... s>
-struct print_val<string<c,s...> >:
-	print_val<value_type<char,c> >,
-	print_val<string<s...> >
-{};
 
 template <typename HEAP, typename SP>
 struct env_
@@ -304,7 +254,7 @@ struct analyze<symbol<sym...> >
 	};
 	ob ret(ob env)
 	{
-		return rtsGetBinding(env, symbol<sym...>::reified);
+		return rtsGetBinding(env, reified<symbol<sym...>>);
 	}
 	ob proc(ob env, ob args)
 	{
@@ -318,7 +268,7 @@ struct analyze<string<sym...> >
 {
 	ob ret(ob env)
 	{
-		return string<sym...>::reified;
+		return reified<string<sym...>>;
 	}
 };
 
@@ -439,7 +389,7 @@ struct analyze<cons<QUOTE, cons<REST, nil> > >
 
 	ob ret(ob env)
 	{
-		return REST::reified;
+		return reified<REST>;
 	}
 };
 
@@ -581,7 +531,7 @@ struct analyze<cons<SET, cons<VAR, cons<FORM, nil> > > >
 	ob ret(ob env)
 	{
 		ob val = val_analyze().ret(env);
-		rtsSetBinding(env, VAR::reified, val);
+		rtsSetBinding(env, reified<VAR>, val);
 		return val;
 	}
 };
@@ -600,7 +550,7 @@ struct analyze<cons<DEFINE, cons<cons<FUN, ARGS>, BODY> > >
 	ob ret(ob env)
 	{
 		ob val = val_analyze().ret(env);
-		rtsAddBinding(env, obnew(otcons, 2, FUN::reified, val));
+		rtsAddBinding(env, obnew(otcons, 2, reified<FUN>, val));
 		return val;
 	}
 };
@@ -620,7 +570,7 @@ struct analyze<cons<DEFINE, cons<symbol<NAME...>, cons<FORM, nil> > > >
 	ob ret(ob env)
 	{
 		ob val = val_analyze().ret(env);
-		rtsAddBinding(env, obnew(otcons, 2, symbol<NAME...>::reified, val));
+		rtsAddBinding(env, obnew(otcons, 2, reified<symbol<NAME...>>, val));
 		return val;
 	}
 };
@@ -746,7 +696,7 @@ struct new_frame<cons<CAR,CDR> >
 	static ob frame(size_t n, ob* args)
 	{
 		assert(n > 0);
-		ob bind = obnew(otcons, 2, CAR::reified, *args++);
+		ob bind = obnew(otcons, 2, reified<CAR>, *args++);
 		return obnew(otcons, 2, bind, new_frame<CDR>::frame(n - 1, args));
 	}
 };

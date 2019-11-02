@@ -134,4 +134,22 @@ struct print_val<nil>:
 	public print_nil
 {};
 
+template <>
+struct print_val<string<> >
+{};
+template <char c, char... s>
+struct print_val<string<c,s...> >:
+	print_val<value_type<char,c> >,
+	print_val<string<s...> >
+{};
+
+template <char c, char... cs>
+struct print_val<symbol<c, cs...> >:
+	print_val<value_type<char, c> >,
+	print_val<symbol<cs...> >
+{};
+template <>
+struct print_val<symbol<> >
+{};
+
 }
