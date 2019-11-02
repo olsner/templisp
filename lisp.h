@@ -5,11 +5,6 @@
 #include "heap.h"
 
 namespace {
-template <char... sym>
-struct symbol
-{
-	static ob reified;
-};
 static inline void* copyinto(void* target)
 {
 	return target;
