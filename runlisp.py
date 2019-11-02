@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 
-import sys
-import os
 import argparse
+import os
+import subprocess
+import sys
 
 special = {
 	# TODO Should be handled by adding a mapping from the symbol nil to the special nil value instead
@@ -112,8 +113,8 @@ def to_chars(s):
 		if c == '\'': c = "\\'"
 		yield "'%s'" % c
 
-clang = 'clang++ -Os -g -std=c++11 -o %s "-DPROG=%s" %s 2>&1'
-gcc = 'g++ -Os -g -fmessage-length=0 -ftemplate-depth-1000 -std=c++11 -Wall -Wno-unused-variable -Wno-unused-function -o %s "-DPROG=%s" %s 2>&1 | ./filter.sh'
+clang = 'clang++ -Os -g -std=c++11 -c -o %s "-DPROG=%s" %s 2>&1'
+gcc = 'g++ -Os -g -fmessage-length=0 -ftemplate-depth-1000 -std=c++11 -Wall -Wno-unused-variable -Wno-unused-function -c -o %s "-DPROG=%s" %s 2>&1 | ./filter.sh'
 
 def mktemp():
 	import tempfile
@@ -121,6 +122,11 @@ def mktemp():
 	name = h.name
 	h.close()
 	return name
+
+def link(args, out):
+    # For some reason, clang++ compiled sources don't link right with g++?
+    driver = args.compiler.split()[0]
+    subprocess.check_call([driver, "-o", out, out+".o"])
 
 def run(args, prog):
 	prog='typedef '+prog+' prog;'
@@ -130,16 +136,18 @@ def run(args, prog):
 	else:
 		out = args.output
 		temp = None
-	cmd = args.compiler % (out, prog, args.shell)
+	cmd = args.compiler % (out + ".o", prog, args.shell)
 	try:
 		r = os.system(cmd)
 		if r: return r
+                link(args, out)
 		if args.compile_only:
 			return 0
 		else:
 			return os.system(out)
 	finally:
 		if temp: os.unlink(temp)
+                os.unlink(out + ".o")
 def justPrint(args, prog):
 	print prog
 
@@ -167,8 +175,6 @@ parser.add_argument('--output', '-o', default=None,
 	help="Save compiled executable to given path (default: compile to a temporary file, remove it afterwards)")
 
 args = parser.parse_args()
-
-compiler = gcc
 
 for a in args.expressions:
 	s,rest = parse(a)
