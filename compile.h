@@ -182,7 +182,7 @@ ob eval(const T&)
 #define reg_prim(p) \
 	cons<p, prim<prim_##p> >
 
-	ob env = reified<list<list<
+	ob env = reified<list_t<list_t<
 reg_prim(ABORT),
 reg_prim(PLUS),
 reg_prim(MULTIPLY),
@@ -202,7 +202,7 @@ reg_prim(SYMBOL),
 reg_prim(PAIR),
 reg_prim(LIST_TO_SYM),
 reg_prim(LIST_TO_STRING)
-		>::value>::value>;
+		>>>;
 
 	return analyze<T>().ret(env);
 }

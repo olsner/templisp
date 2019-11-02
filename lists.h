@@ -1,61 +1,46 @@
 namespace {
 
-template <typename... T> struct list;
-template <> struct list<>
-{ typedef nil value; };
-template <typename X, typename... Xs> struct list<X, Xs...>
-{ typedef cons<X, typename list<Xs...>::value > value; };
+template<typename... T> struct list;
+template<typename... T> using list_t = typename list<T...>::value;
+template<typename CONS> using car_t = typename CONS::car;
+template<typename CONS> using cdr_t = typename CONS::cdr;
+
+template<typename LIST, typename Out> struct reverse;
+template<typename LIST, typename Out = nil> using reverse_t = typename reverse<LIST, Out>::value;
+
+template<typename L1, typename L2> struct append;
+template<typename L1, typename L2> using append_t = typename append<L1, L2>::value;
+
+template<typename CONS> struct length;
+template<typename CONS> constexpr uint length_v = length<CONS>::value;
+
+template<> struct list<> { typedef nil value; };
+template<typename X, typename... Xs> struct list<X, Xs...> { typedef cons<X, list_t<Xs...>> value; };
 
 template <typename CONS>
 struct length
 {
-	static const uint value=1+length<typename CONS::cdr>::value;
+	static constexpr uint value = 1 + length_v<cdr_t<CONS>>;
+};
+template<> struct length<nil> { static constexpr uint value = 0; };
+
+template<typename CONS, typename OUT> struct reverse
+{
+    using value = reverse_t<cdr_t<CONS>, cons<car_t<CONS>, OUT>>;
+};
+template<typename Out> struct reverse<nil, Out> { using value = Out; };
+
+
+template<typename L1, typename L2> struct append {
+	using value = cons<car_t<L1>, append_t<cdr_t<L1>, L2>>;
 };
 
-template <>
-struct length<nil>
-{
-	static const uint value=0;
-};
+template<typename L2> struct append<nil, L2> { using value = L2; };
 
-template <typename CONS, typename OUT=nil>
-class reverse
-{
-	typedef typename CONS::car car;
-	typedef typename CONS::cdr cdr;
-public:
-	typedef typename reverse<cdr, cons<car, OUT> >::value value;
-};
-
-template <typename OUT>
-struct reverse<nil, OUT>
-{
-	typedef OUT value;
-};
-
-template <typename L1, typename L2>
-class append
-{
-public:
-	typedef cons<typename L1::car,
-				typename append<typename L1::cdr, L2>::value>
-		value;
-};
-
-template <typename L2>
-struct append<nil, L2>
-{
-	typedef L2 value;
-};
 template <typename... Xs, typename... Ys>
 struct append<list<Xs...>, list<Ys...>>
 {
-	typedef typename list<Xs..., Ys...>::value value;
-};
-template <typename... Xs, typename B>
-struct append<list<Xs...>, B>
-{
-	typedef typename append<typename list<Xs...>::value, B>::value value;
+	using value = list_t<Xs..., Ys...>;
 };
 
 }
