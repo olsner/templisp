@@ -1,3 +1,7 @@
+#pragma once
+
+#include "print.h"
+
 namespace {
 
 template<typename... T> struct heap {};
@@ -15,10 +19,6 @@ template <typename H,typename P> using peek_t = typename peek<H, P>::value;
 template <typename H,typename P,typename Val> struct poke;
 template <typename H,typename P,typename Val> using poke_t = typename poke<H, P, Val>::value;
 template <typename H, typename Val> struct alloc;
-
-template <int p> struct ptr;
-template <int p>
-struct print_val<ptr<p>>: print_val<value_type<char,'#'>>,print_int<p> {};
 
 template <typename X, typename... Xs>
 struct peek<heap<X, Xs...>, ptr<0>>

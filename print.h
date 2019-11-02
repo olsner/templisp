@@ -1,3 +1,5 @@
+#pragma once
+
 namespace {
 
 /**************************************************************
@@ -151,5 +153,14 @@ struct print_val<symbol<c, cs...> >:
 template <>
 struct print_val<symbol<> >
 {};
+
+extern const char print_lambda[]="<procedure>";
+template <typename ARGS, typename BODY, typename ENV>
+struct print_val<lambda<ARGS, BODY, ENV> >:
+	PRINT_STRING(print_lambda)
+{};
+
+template <int p>
+struct print_val<ptr<p>>: print_val<value_type<char,'#'>>,print_int<p> {};
 
 }

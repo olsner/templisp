@@ -34,4 +34,14 @@ struct string
 {
 };
 
+template <typename ARGS, typename BODY, typename SP>
+struct lambda
+{
+	typedef ARGS args;
+	typedef BODY body;
+	typedef SP sp;
+};
+
+template <int p> struct ptr;
+
 }

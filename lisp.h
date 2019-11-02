@@ -1,7 +1,6 @@
 #include "rts.h"
 #include "utils.h"
 #include "lists.h"
-#include "print.h"
 #include "heap.h"
 #include "reify.h"
 
@@ -188,19 +187,6 @@ struct set_binding<ENV,nil,SYM,VAL>
 	using value = add_binding_t<SYM,VAL,ENV>;
 };
 
-
-template <typename ARGS, typename BODY, typename SP>
-struct lambda
-{
-	typedef ARGS args;
-	typedef BODY body;
-	typedef SP sp;
-};
-extern const char print_lambda[]="<procedure>";
-template <typename ARGS, typename BODY, typename ENV>
-struct print_val<lambda<ARGS, BODY, ENV> >:
-	PRINT_STRING(print_lambda)
-{};
 
 template<typename EXPR> struct analyze;
 template<typename FUN, typename ACTUALS> struct apply;
