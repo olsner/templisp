@@ -11,9 +11,15 @@ special = {
 	'set' : 'SET',
 }
 
+# This disallows initial -, requiring those to be numbers. Are symbols with
+# initial - used? Maybe we need to look after the - to see if there's a number
+# or a symbol coming.
 def isSymChar(c, first):
-	return c in '+-/*?<>!=' or (c >= 'a' and c <= 'z') or (c >= 'A' and c <= 'Z') \
-		or (not first and c >= '0' and c <= '9')
+	return c in '+/*?<>!=' or (c >= 'a' and c <= 'z') or (c >= 'A' and c <= 'Z') \
+		or (not first and (isDigit(c) or c in '-'))
+
+def isDigit(c):
+    return c >= '0' and c <= '9'
 
 def cppSafe(sym):
 	res = ''
@@ -71,12 +77,8 @@ def parse(sexp):
 		return [('quote',), s], rest
 	elif isSymChar(h, True):
 		return parseSym(sexp)
-	else:
-		try:
-			int(h, 10)
-			return parseInt(sexp)
-		except:
-			pass
+	elif isDigit(h) or h == '-':
+		return parseInt(sexp)
 	assert False, "Unexpected character %r at start of %r" % (h, sexp)
 
 def concat(*xs):
