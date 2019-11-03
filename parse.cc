@@ -75,6 +75,12 @@ template<typename Sym> struct parse_sym<string_holder<>, Sym> {
 
 template<char C, char... STR>
 struct parse<string_holder<C, STR...>, enable_if_t<is_digit(C)>>: parse_num<string_holder<C, STR...>> {};
+template<char... STR>
+struct parse<string_holder<'-', STR...>> {
+    using p = parse_num<string_holder<STR...>>;
+    using type = value_type<typename p::type::type, -p::type::value>;
+    using tail = typename p::tail;
+};
 
 template<int acc, char C, char... STR>
 struct parse_num<string_holder<C, STR...>, acc, enable_if_t<is_digit(C)>>:
@@ -111,6 +117,7 @@ template<typename T> void compare_stringstream(const char* expected, T) {
     s << print<T>();
     if (s.str() != expected) {
         std::cout << "Test failed: Expected " << expected << " but got " << s.str() << std::endl;
+        std::cout << "typeid: " << typeid(T).name() << std::endl; \
     }
 }
 

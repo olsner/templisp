@@ -19,7 +19,8 @@ struct cons
 template <typename T, T val>
 struct value_type
 {
-	static constexpr T value = val;
+    using type = T;
+    static constexpr T value = val;
 };
 
 #define INT(_i) value_type<int, _i>
