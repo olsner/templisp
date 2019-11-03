@@ -1,5 +1,6 @@
 #define COMPILER
 #include "lisp.h"
+#include "parse.h"
 #include "compile.h"
 
 namespace {

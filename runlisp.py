@@ -2,6 +2,9 @@
 
 import argparse
 import os
+# Python2/3 stuff
+#from shlex import quote
+from pipes import quote
 import subprocess
 import sys
 
@@ -113,8 +116,13 @@ def to_chars(s):
         if c == '\'': c = "\\'"
         yield "'%s'" % c
 
-clang = 'clang++ -Os -g -std=c++17 -Wno-gnu-string-literal-operator-template -c -o %s "-DPROG=%s" %s 2>&1'
-gcc = 'g++ -Os -g -fmessage-length=0 -ftemplate-depth-1000 -std=c++17 -Wall -Wno-unused-variable -Wno-unused-function -c -o %s "-DPROG=%s" %s 2>&1 | ./filter.sh'
+def to_string(s):
+    return '"%s"' % s.replace('"', '\\"')
+
+# TODO Build an argument list instead so we don't have to mess with quoting,
+# and add optional filtering separately.
+clang = "clang++ -Os -g -std=c++17 -Wno-gnu-string-literal-operator-template -c -o %s -DPROG=%s %s 2>&1"
+gcc = "g++ -Os -g -fmessage-length=0 -ftemplate-depth-1000 -std=c++17 -Wall -Wno-unused-variable -Wno-unused-function -c -o %s -DPROG=%s %s 2>&1" # | ./filter.sh"
 
 def mktemp():
     import tempfile
@@ -128,15 +136,23 @@ def link(args, out):
     driver = args.compiler.split()[0]
     subprocess.check_call([driver, "-o", out, out+".o"])
 
-def run(args, prog):
-    prog='typedef '+prog+' prog;'
+def run(args, progtype, progstring):
+    if args.compile_time_parsing:
+        prog = "using prog = decltype(%s_lisp);" % to_string(progstring)
+    else:
+        prog = 'using prog = %s;' % progtype
     if args.output is None:
         out = mktemp()
         temp = out
     else:
         out = args.output
         temp = None
-    cmd = args.compiler % (out + ".o", prog, args.shell)
+    cmd = args.compiler % (out + ".o", quote(prog), args.shell)
+    if args.verbose:
+        print "program string:", progstring
+        print "program type (Python parsed):", progtype
+        print "program typedef:", prog
+        print "compiler cmdline:" , cmd
     try:
         r = os.system(cmd)
         if r: return r
@@ -146,14 +162,18 @@ def run(args, prog):
         else:
             return os.system(out)
     finally:
-        if temp: os.unlink(temp)
-        os.unlink(out + ".o")
-def justPrint(args, prog):
+        if temp:
+            os.unlink(temp)
+            os.unlink(temp + ".o")
+
+def justPrint(args, prog, progstring):
     print prog
 
 parser = argparse.ArgumentParser(description="Translate S-expressions to templates and display or compile/interpret using a C++ compiler.")
 parser.add_argument('expressions', metavar='SEXP', type=str, nargs='+',
     help='an S-expression to translate/compile/interpret')
+
+parser.add_argument('--verbose', action='store_true', help="Print commands")
 
 parser.add_argument('--clang', dest='compiler', action='store_const',
     const=clang, default=gcc,
@@ -171,6 +191,9 @@ parser.add_argument('--compile', dest='shell', action='store_const',
 parser.add_argument('--compile-only', action='store_true', default=False,
     help="Don't run after compiling")
 
+parser.add_argument('--compile-time-parsing', action='store_true', default=False,
+    help="Parse using templates instead of Python")
+
 parser.add_argument('--output', '-o', default=None,
     help="Save compiled executable to given path (default: compile to a temporary file, remove it afterwards)")
 
@@ -179,4 +202,4 @@ args = parser.parse_args()
 for a in args.expressions:
     s,rest = parse(a)
     assert not len(rest), "Unconsumed input: %r" % (rest)
-    if args.action(args, p(s)): sys.exit(1)
+    if args.action(args, p(s), a): sys.exit(1)

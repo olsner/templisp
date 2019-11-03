@@ -1,4 +1,5 @@
 #include "lisp.h"
+#include "parse.h"
 #include <stdio.h>
 
 typedef env_<heap<>,nil> really_empty_env;
