@@ -4,15 +4,16 @@
 
 namespace {
 
+// The heap is represented as a tuple of types, pointer 0 points to the first value in the heap.
 template<typename... T> struct heap {};
 
 template <typename X, typename H> struct cons_heap;
+template <typename X, typename H> using cons_heap_t = typename cons_heap<X, H>::value;
 template <typename X, typename... Xs>
 struct cons_heap<X, heap<Xs...>>
 {
 	typedef heap<X, Xs...> value;
 };
-template <typename X, typename H> using cons_heap_t = typename cons_heap<X, H>::value;
 
 template <typename H,typename P> struct peek;
 template <typename H,typename P> using peek_t = typename peek<H, P>::value;
@@ -54,6 +55,13 @@ struct alloc<heap<Xs...>, V>
     typedef ptr<sizeof...(Xs)> value;
 };
 
+// peek<> that reads a pointer and dereferences all pointers to their values recursively.
+// Looks like for now only cons cells are handled? That can be fixed when you
+// get a printed value containing "#0" (pointer) instead of values.
+// This doesn't handle recursive data structures either, so I think we'll
+// eventually want a nicer formatting template that dereferences pointers once,
+// keeps track of printed values and prints back references for other things.
+// (e.g. ptr<0> on heap<cons<ptr<0>, ptr<0>>>)
 template <typename ENV, typename V> struct deepeek { typedef V value; };
 template <typename ENV, typename V> using deepeek_t = typename deepeek<ENV, V>::value;
 
