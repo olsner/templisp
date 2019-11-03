@@ -117,7 +117,8 @@ def to_chars(s):
         yield "'%s'" % c
 
 def to_string(s):
-    return '"%s"' % s.replace('"', '\\"')
+    assert ")foo" not in s
+    return 'R"foo(%s)foo"' % s
 
 # TODO Build an argument list instead so we don't have to mess with quoting,
 # and add optional filtering separately.
