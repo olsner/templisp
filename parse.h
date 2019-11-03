@@ -22,8 +22,18 @@ constexpr bool is_letter(char c) {
 constexpr bool is_symchar(char c, bool initial = false) {
     return is_member(c, "+/*?<>!=") || is_letter(c) || (!initial && (is_digit(c) || c == '-'));
 }
+constexpr bool is_whitespace(char c) {
+    return is_member(c, " \t\n");
+}
 
+// TODO Actually the same as string<STR...>, should probably use that. That'd
+// also give us a way to implement read/parse functions as built-ins.
 template<char... STR> struct string_holder;
+
+// _s typedefs take a variadic set of chars directly, to make it more
+// convenient to use the templates that go through string_holder.
+// The string_holder is required to combine variadics with the default value
+// for Enable.
 
 template<typename T, typename Enable = void> struct parse;
 template<char... STR> using parse_s = parse<string_holder<STR...>>;
@@ -33,6 +43,9 @@ template<char... STR> using parse_open_list_s = parse_open_list<STR...>;
 template<typename T> struct parse_list_tail;
 template<char... STR> struct parse_list_tail<string_holder<STR...>>: parse_open_list<STR...> {};
 
+template<char... STR> struct skip_comment;
+template<char... STR> using skip_comment_s = typename skip_comment<STR...>::tail;
+
 template<typename S, int acc = 0, typename Enable = void> struct parse_num;
 template<typename S, typename Sym = symbol<>, typename Enable = void> struct parse_sym;
 
@@ -41,9 +54,9 @@ template<typename S, typename Sym = symbol<>, typename Enable = void> struct par
     using type = typename p::type; \
     using tail = typename p::tail;
 
-// TODO Match and strip more whitespace (add a way to do it with is_whitespace
-// to avoid duplication between parse and parse_open_list)
-template<char... STR> struct parse<string_holder<' ', STR...>> { FORWARD(parse_s<STR...>) };
+template<char C, char... STR>
+struct parse<string_holder<C, STR...>, enable_if_t<is_whitespace(C)>> { FORWARD(parse_s<STR...>) };
+template<char... STR> struct parse<string_holder<';', STR...>> { FORWARD(parse<skip_comment_s<STR...>>) };
 template<char... STR> struct parse<string_holder<'(', STR...>> { FORWARD(parse_open_list_s<STR...>) };
 template<char... STR> struct parse<string_holder<'\'', STR...>> {
     using p = parse_s<STR...>;
@@ -91,6 +104,8 @@ template<int acc> struct parse_num<string_holder<>, acc> {
     using tail = string_holder<>;
 };
 
+// TODO Adjust list parse template like parse<> to allow an enable_if
+// parameter, and handle comments in lists as well.
 template<char... STR> struct parse_open_list<' ', STR...> { FORWARD(parse_open_list<STR...>) };
 template<char... STR> struct parse_open_list<')', STR...> {
     using type = nil;
@@ -105,6 +120,9 @@ template<char... STR> struct parse_open_list {
     using type = cons<typename car::type, typename cdr::type>;
     using tail = typename cdr::tail;
 };
+
+template<char... STR> struct skip_comment<'\n', STR...> { using tail = string_holder<STR...>; };
+template<char C, char... STR> struct skip_comment<C, STR...> { using tail = skip_comment_s<STR...>; };
 
 }
 

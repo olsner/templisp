@@ -28,9 +28,6 @@ int main()
     }
 
     TEST("nil", "()"_lisp);
-    TEST("nil", " ()"_lisp);
-    TEST("nil", " ( )"_lisp);
-    //TEST("()", " \t\n( \t\n)"_lisp);
     TEST("(quote nil)", "'()"_lisp);
     TEST("(nil nil)", "(() ())"_lisp);
     TEST("(nil nil nil)", "(() () ())"_lisp);
@@ -42,4 +39,18 @@ int main()
     TEST("foo", "foo"_lisp);
     TEST("(foo bar)", "(foo bar)"_lisp);
     TEST("(foo-bar-123+-/*?<>!= baz)", "(foo-bar-123+-/*?<>!= baz)"_lisp);
+    //whitespace
+    TEST("nil", " ()"_lisp);
+    TEST("nil", " ( )"_lisp);
+    TEST("nil", " \t\n( )"_lisp);
+//    TEST("()", " \t\n( \t\n)"_lisp); // ending a list after other whitespace is not supported
+    TEST("symbol-after-newline", R"(
+    symbol-after-newline )"_lisp);
+    TEST("(list-after-newline)", R"(
+    (list-after-newline) )"_lisp);
+    TEST("(foo bar)", R"( (foo
+    bar) )"_lisp);
+    // comments
+    TEST("nil", ";\n()"_lisp);
+    TEST("nil", "; comment\n()"_lisp);
 }
