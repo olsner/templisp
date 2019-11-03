@@ -113,7 +113,7 @@ def to_chars(s):
 		if c == '\'': c = "\\'"
 		yield "'%s'" % c
 
-clang = 'clang++ -Os -g -std=c++17 -c -o %s "-DPROG=%s" %s 2>&1'
+clang = 'clang++ -Os -g -std=c++17 -Wno-gnu-string-literal-operator-template -c -o %s "-DPROG=%s" %s 2>&1'
 gcc = 'g++ -Os -g -fmessage-length=0 -ftemplate-depth-1000 -std=c++17 -Wall -Wno-unused-variable -Wno-unused-function -c -o %s "-DPROG=%s" %s 2>&1 | ./filter.sh'
 
 def mktemp():
