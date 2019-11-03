@@ -5,39 +5,10 @@
 #include <string_view>
 
 #include "types.h"
+#include "print.h"
+#include "lists.h"
 
 using namespace std;
-
-template<typename ITEM> struct quote {};
-
-// TODO do constexpr type-level printing too
-template<typename CAR> void out_list(ostream& os, cons<CAR, nil> list) {
-    os << CAR();
-}
-template<typename CAR, typename CADR, typename CDR> void out_list(ostream& os, cons<CAR, cons<CADR, CDR>> list) {
-    os << CAR() << " ";
-    out_list(os, cons<CADR, CDR>());
-}
-template<typename CAR, typename CDR> void out_list(ostream& os, cons<CAR, CDR> list) {
-    os << CAR() << " . " << CDR();
-}
-
-ostream& operator<<(ostream& os, nil) {
-    return os << "()";
-}
-template<typename ITEM> ostream& operator<<(ostream& os, quote<ITEM>) {
-    return os << "(quote " << ITEM() << ")";
-}
-template<typename CAR, typename CDR> ostream& operator<<(ostream& os, cons<CAR, CDR> list) {
-    out_list(os << "(", list);
-    return os << ")";
-}
-template<char... STR> ostream& operator<<(ostream& os, symbol<STR...>) {
-    return os << array { STR..., '\0' }.data();
-}
-template<typename T, T val> ostream& operator<<(ostream& os, value_type<T, val>) {
-    return os << val;
-}
 
 constexpr bool is_digit(char c) {
     return '0' <= c && c <= '9';
@@ -80,7 +51,7 @@ template<char... STR> struct parse<string_holder<' ', STR...>> { FORWARD(parse_s
 template<char... STR> struct parse<string_holder<'(', STR...>> { FORWARD(parse_open_list_s<STR...>) };
 template<char... STR> struct parse<string_holder<'\'', STR...>> {
     using p = parse_s<STR...>;
-    using type = quote<typename p::type>;
+    using type = list_t<decltype("quote"_sym), typename p::type>;
     using tail = typename p::tail;
 };
 // template<char... STR> struct parse<'\"', STR...> // TODO Strings
@@ -137,7 +108,7 @@ template<typename C, C... STR> constexpr auto operator"" _lisp() { return parse_
 
 template<typename T> void compare_stringstream(const char* expected, T) {
     std::stringstream s;
-    s << T();
+    s << print<T>();
     if (s.str() != expected) {
         std::cout << "Test failed: Expected " << expected << " but got " << s.str() << std::endl;
     }
@@ -149,19 +120,20 @@ int main()
 #define TEST(expected, lit) \
     { \
         constexpr auto expr = lit; \
-        std::cout << "parsed: " << expr << std::endl; \
+        std::cout << "parsed: " << print(expr) << std::endl; \
         compare_stringstream(expected, expr); \
     }
 
-    TEST("()", "()"_lisp);
-    TEST("()", " ()"_lisp);
-    TEST("()", " ( )"_lisp);
+    TEST("nil", "()"_lisp);
+    TEST("nil", " ()"_lisp);
+    TEST("nil", " ( )"_lisp);
     //TEST("()", " \t\n( \t\n)"_lisp);
-    TEST("(quote ())", "'()"_lisp);
-    TEST("(() ())", "(() ())"_lisp);
-    TEST("(() () ())", "(() () ())"_lisp);
+    TEST("(quote nil)", "'()"_lisp);
+    TEST("(nil nil)", "(() ())"_lisp);
+    TEST("(nil nil nil)", "(() () ())"_lisp);
     // numbers
     TEST("12345", "12345"_lisp);
+    TEST("-48", "-48"_lisp); // TODO Check that we get a number and not a symbol, they'll print the same...
     TEST("(1 2 3 4 5)", "(1 2 3 4 5)"_lisp);
     // symbols
     TEST("foo", "foo"_lisp);

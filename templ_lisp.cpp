@@ -25,5 +25,5 @@ int main()
 {
 	typedef eval<prog, initial_env> eval_result;
 	print_env<eval_result::env, eval_result::value> printed;
-	puts((char*)printed);
+	puts(printed);
 }

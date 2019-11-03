@@ -29,6 +29,8 @@ struct symbol
 {
 };
 
+template<typename C, C... SYM> constexpr auto operator"" _sym() { return symbol<SYM...>(); }
+
 template <char... s>
 struct string
 {

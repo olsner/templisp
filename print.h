@@ -1,5 +1,8 @@
 #pragma once
 
+#include <cstring>
+#include <iostream>
+
 namespace {
 
 /**************************************************************
@@ -107,9 +110,9 @@ struct print_val<cons<CAR, CDR> >:
 template <typename T>
 struct printable
 {
-	inline operator char *()
+	operator const char *() const
 	{
-		return (char *)(T*)this;
+		return (const char *)(T*)this;
 	}
 };
 
@@ -123,7 +126,13 @@ struct terminate:
 template <typename VAL>
 struct print:
 	public terminate<print_val<VAL> >
-{};
+{
+    print(VAL = VAL()) {}
+};
+
+template<typename T> std::ostream& operator<<(std::ostream& os, print<T> p) {
+    return os << (const char*)p;
+}
 
 extern const char print_nil_text[]="nil";
 struct print_nil
