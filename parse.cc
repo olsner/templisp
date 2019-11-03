@@ -23,7 +23,7 @@ constexpr bool is_letter(char c) {
     return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
 }
 constexpr bool is_symchar(char c, bool initial = false) {
-    return is_member(c, "+-/*?<>!=") || is_letter(c) || (!initial && is_digit(c));
+    return is_member(c, "+/*?<>!=") || is_letter(c) || (!initial && (is_digit(c) || c == '-'));
 }
 
 template<char... STR> struct string_holder;
