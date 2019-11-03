@@ -1,6 +1,6 @@
 testing2() {
 	echo "Testing $1 -- $2"
-	time shelltest -cad --with "$2" tests -- -j4 || exit 1
+	time shelltest -cad --with "$2" tests -- -j`nproc` || exit 1
 }
 
 testing() {
