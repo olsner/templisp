@@ -53,4 +53,8 @@ int main()
     // comments
     TEST("nil", ";\n()"_lisp);
     TEST("nil", "; comment\n()"_lisp);
+//    TEST("nil", "(; comment\n)"_lisp);
+
+    // strings
+    TEST("string", "\"string\""_lisp); // TODO Change string printing to include quotes
 }

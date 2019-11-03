@@ -28,7 +28,7 @@ constexpr bool is_whitespace(char c) {
 
 // TODO Actually the same as string<STR...>, should probably use that. That'd
 // also give us a way to implement read/parse functions as built-ins.
-template<char... STR> struct string_holder;
+template<char... STR> struct string_holder {};
 
 // _s typedefs take a variadic set of chars directly, to make it more
 // convenient to use the templates that go through string_holder.
@@ -45,6 +45,9 @@ template<char... STR> struct parse_list_tail<string_holder<STR...>>: parse_open_
 
 template<char... STR> struct skip_comment;
 template<char... STR> using skip_comment_s = typename skip_comment<STR...>::tail;
+
+template<typename S, typename E, char... STR> struct parse_string;
+template<char... STR> using parse_string_s = parse_string<string<>, void, STR...>;
 
 template<typename S, int acc = 0, typename Enable = void> struct parse_num;
 template<typename S, typename Sym = symbol<>, typename Enable = void> struct parse_sym;
@@ -63,7 +66,7 @@ template<char... STR> struct parse<string_holder<'\'', STR...>> {
     using type = list_t<decltype("quote"_sym), typename p::type>;
     using tail = typename p::tail;
 };
-// template<char... STR> struct parse<'\"', STR...> // TODO Strings
+template<char... STR> struct parse<string_holder<'"', STR...>> { FORWARD(parse_string_s<STR...>) };
 template<char C, char... STR>
 struct parse<string_holder<C, STR...>, enable_if_t<is_symchar(C, true)>> {
     FORWARD(parse_sym<string_holder<STR...>, symbol<C>>);
@@ -83,7 +86,7 @@ template<typename Sym> struct parse_sym<string_holder<>, Sym> {
 };
 
 template<char C, char... STR>
-struct parse<string_holder<C, STR...>, enable_if_t<is_digit(C)>>: parse_num<string_holder<C, STR...>> {};
+struct parse<string_holder<C, STR...>, enable_if_t<is_digit(C)>> { FORWARD(parse_num<string_holder<C, STR...>>) };
 template<char... STR>
 struct parse<string_holder<'-', STR...>> {
     using p = parse_num<string_holder<STR...>>;
@@ -123,6 +126,16 @@ template<char... STR> struct parse_open_list {
 
 template<char... STR> struct skip_comment<'\n', STR...> { using tail = string_holder<STR...>; };
 template<char C, char... STR> struct skip_comment<C, STR...> { using tail = skip_comment_s<STR...>; };
+
+template<char... STR, typename T>
+struct parse_string<T, void, '"', STR...> {
+    using type = T;
+    using tail = string_holder<STR...>;
+};
+template<char... Cs, char C, char... STR>
+struct parse_string<string<Cs...>, enable_if_t<C != '"'>, C, STR...> {
+    FORWARD(parse_string<string<Cs..., C>, void, STR...>)
+};
 
 }
 
