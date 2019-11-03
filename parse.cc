@@ -43,7 +43,7 @@ int main()
     TEST("nil", " ()"_lisp);
     TEST("nil", " ( )"_lisp);
     TEST("nil", " \t\n( )"_lisp);
-//    TEST("()", " \t\n( \t\n)"_lisp); // ending a list after other whitespace is not supported
+    TEST("nil", " \t\n( \t\n)"_lisp);
     TEST("symbol-after-newline", R"(
     symbol-after-newline )"_lisp);
     TEST("(list-after-newline)", R"(
@@ -53,7 +53,7 @@ int main()
     // comments
     TEST("nil", ";\n()"_lisp);
     TEST("nil", "; comment\n()"_lisp);
-//    TEST("nil", "(; comment\n)"_lisp);
+    TEST("nil", "(; comment\n)"_lisp);
 
     // strings
     TEST("string", "\"string\""_lisp); // TODO Change string printing to include quotes

@@ -38,10 +38,8 @@ template<char... STR> struct string_holder {};
 template<typename T, typename Enable = void> struct parse;
 template<char... STR> using parse_s = parse<string_holder<STR...>>;
 
-template<char... STR> struct parse_open_list;
-template<char... STR> using parse_open_list_s = parse_open_list<STR...>;
-template<typename T> struct parse_list_tail;
-template<char... STR> struct parse_list_tail<string_holder<STR...>>: parse_open_list<STR...> {};
+template<typename T, typename Enable = void> struct parse_open_list;
+template<char... STR> using parse_open_list_s = parse_open_list<string_holder<STR...>>;
 
 template<char... STR> struct skip_comment;
 template<char... STR> using skip_comment_s = typename skip_comment<STR...>::tail;
@@ -107,19 +105,20 @@ template<int acc> struct parse_num<string_holder<>, acc> {
     using tail = string_holder<>;
 };
 
-// TODO Adjust list parse template like parse<> to allow an enable_if
-// parameter, and handle comments in lists as well.
-template<char... STR> struct parse_open_list<' ', STR...> { FORWARD(parse_open_list<STR...>) };
-template<char... STR> struct parse_open_list<')', STR...> {
+template<char C, char... STR>
+struct parse_open_list<string_holder<C, STR...>, enable_if_t<is_whitespace(C)>> { FORWARD(parse_open_list_s<STR...>) };
+template<char... STR> struct parse_open_list<string_holder<';', STR...>> { FORWARD(parse_open_list<skip_comment_s<STR...>>) };
+template<char... STR> struct parse_open_list<string_holder<')', STR...>> {
     using type = nil;
     using tail = string_holder<STR...>;
 };
 
 // TODO Dotted list
 
-template<char... STR> struct parse_open_list {
-    using car = parse<string_holder<STR...>>;
-    using cdr = parse_list_tail<typename car::tail>;
+template<char C, char... STR>
+struct parse_open_list<string_holder<C, STR...>, enable_if_t<!is_whitespace(C)>> {
+    using car = parse_s<C, STR...>;
+    using cdr = parse_open_list<typename car::tail>;
     using type = cons<typename car::type, typename cdr::type>;
     using tail = typename cdr::tail;
 };
