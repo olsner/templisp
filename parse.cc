@@ -13,7 +13,7 @@ template<typename T> void compare_stringstream(const char* expected, T) {
     s << print<T>();
     if (s.str() != expected) {
         std::cout << "Test failed: Expected " << expected << " but got " << s.str() << std::endl;
-        std::cout << "typeid: " << typeid(T).name() << std::endl; \
+        //std::cout << "typeid: " << typeid(T).name() << std::endl;
     }
 }
 
