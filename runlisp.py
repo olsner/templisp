@@ -90,11 +90,11 @@ def concat(*xs):
         res += s
     return res
 
-def p(s):
+def p_cpp(s):
     t = type(s)
     if t is list:
         if len(s):
-            return concat('cons<',p(s[0]),',',p(s[1:]),'>')
+            return concat('cons<',p_cpp(s[0]),',',p_cpp(s[1:]),'>')
         else:
             return 'nil'
     elif t is int:
@@ -107,6 +107,23 @@ def p(s):
             return special.get(s)
         else:
             return 'symbol<%s>' % ','.join(to_chars(s))
+
+def p_lisp(s):
+    t = type(s)
+    if t is list:
+        if len(s) == 2 and s[0] == ('quote',):
+            return "'" + p_lisp(s[1])
+        elif s:
+            return "(%s)" % " ".join(map(p_lisp, s))
+        else:
+            return 'nil'
+    elif t is int:
+        return str(s)
+    elif t is str:
+        # Escapes? but the C++ parser doesn't support that.
+        return '"%s"' % s
+    elif t is tuple:
+        return s[0]
 
 def to_chars(s):
     for c in s:
@@ -140,11 +157,18 @@ def link(args, out):
     driver = args.compiler.split()[0]
     subprocess.check_call([driver, "-o", out, out+".o"])
 
-def run(args, progtype, progstring):
+def run(args, program, progstring):
     if args.compile_time_parsing:
+        # Print just the used parts of the expression (without redundant
+        # whitespace and comments) to hopefully get it small enough that it can
+        # be parsed in less than 15GB or so.
+        # NB: Fails unit tests.
+        progstring = p_lisp(program)
+        with open("out.scm", "w") as h:
+            print >>h, progstring
         prog = "using prog = decltype(%s_lisp);" % to_string(progstring)
     else:
-        prog = 'using prog = %s;' % progtype
+        prog = 'using prog = %s;' % p_cpp(program)
     if args.output is None:
         out = mktemp()
         temp = out
@@ -154,7 +178,7 @@ def run(args, progtype, progstring):
     cmd = args.compiler % (out + ".o", quote("-DPROG=" + prog), args.shell)
     if args.verbose:
         print "program string:", progstring
-        print "program type (Python parsed):", progtype
+        print "program expression (Python parsed):", program
         print "program typedef:", prog
         print "compiler cmdline:" , cmd
     try:
@@ -208,4 +232,4 @@ args = parser.parse_args()
 for a in args.expressions:
     s,rest = parse(a)
     assert not len(rest), "Unconsumed input: %r" % (rest)
-    if args.action(args, p(s), a): sys.exit(1)
+    if args.action(args, s, a): sys.exit(1)

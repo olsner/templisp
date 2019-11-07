@@ -3,7 +3,7 @@
 r() {
 	rlargs=$1
 	shift
-	./runlisp.py --compile $rlargs "(progn `cat ch4-mceval.scm mceval-wrapper.scm` $@)"
+	./runlisp.py --compile --compile-time-parsing $rlargs "(progn `cat ch4-mceval.scm mceval-wrapper.scm` $@)"
 }
 
 set -e
