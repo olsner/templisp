@@ -2,9 +2,6 @@
 
 import argparse
 import os
-# Python2/3 stuff
-#from shlex import quote
-from pipes import quote
 import subprocess
 import sys
 
@@ -122,8 +119,8 @@ def to_string(s):
 
 # TODO Build an argument list instead so we don't have to mess with quoting,
 # and add optional filtering separately.
-clang = "clang++ -Os -g -std=c++17 -Wno-gnu-string-literal-operator-template -c -o %s -DPROG=%s %s 2>&1"
-gcc = "g++ -Os -g -fmessage-length=0 -ftemplate-depth-1000 -std=c++17 -Wall -Wno-unused-variable -Wno-unused-function -c -o %s -DPROG=%s %s 2>&1" # | ./filter.sh"
+clang = "clang++ -Os -g -std=c++17 -Wno-gnu-string-literal-operator-template -c -o %s %s %s 2>&1"
+gcc = "g++ -Os -g -fmessage-length=0 -ftemplate-depth-1000 -std=c++17 -Wall -Wno-unused-variable -Wno-unused-function -c -o %s %s %s 2>&1" # | ./filter.sh"
 
 def mktemp():
     import tempfile
@@ -131,6 +128,12 @@ def mktemp():
     name = h.name
     h.close()
     return name
+
+# There's a quote function in the stdlib, but it produces things like '"'"' for
+# each single quote, and with an input of almost entirely character literals
+# that makes the program too long to fit in a command line.
+def quote(s):
+    return '"%s"' % s.replace('"', '\\"')
 
 def link(args, out):
     # For some reason, clang++ compiled sources don't link right with g++?
@@ -148,7 +151,7 @@ def run(args, progtype, progstring):
     else:
         out = args.output
         temp = None
-    cmd = args.compiler % (out + ".o", quote(prog), args.shell)
+    cmd = args.compiler % (out + ".o", quote("-DPROG=" + prog), args.shell)
     if args.verbose:
         print "program string:", progstring
         print "program type (Python parsed):", progtype
@@ -156,7 +159,9 @@ def run(args, progtype, progstring):
         print "compiler cmdline:" , cmd
     try:
         r = os.system(cmd)
-        if r: return r
+        if r:
+            print >>sys.stderr, "Compilation failed :("
+            return r
         link(args, out)
         if args.compile_only:
             return 0
