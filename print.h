@@ -1,5 +1,8 @@
 #pragma once
 
+#include <cstring>
+#include <iostream>
+
 namespace {
 
 /**************************************************************
@@ -20,13 +23,16 @@ struct print_val<value_type<char, val> >
 
 /**************************************************************
 Integer Printer */
-template <int val>
+template <int val, bool sign = false>
 struct print_int;
+
+template <bool sign> struct print_sign;
+template <> struct print_sign<true>: print_val<value_type<char, '-'>> {};
 
 template <int val>
 struct print_int_prefix
 {
-	print_int<val> prt;
+	print_int<val, false> prt;
 };
 
 template <>
@@ -35,20 +41,28 @@ struct print_int_prefix<0>
 
 template <int digit>
 struct print_digit:
-	public print_val<value_type<char, '0'+digit> >
+	print_val<value_type<char, '0'+digit> >
 {};
 
-template <int val>
+template <int val, bool sign>
 struct print_int:
-	public print_int_prefix<val / 10>,
-	public print_digit<val%10>
+	print_int_prefix<val / 10>,
+	print_digit<val%10>
+{
+};
+
+template <int val>
+struct print_int<val, true>:
+	print_sign<true>,
+	print_int_prefix<-val / 10>,
+	print_digit<-val%10>
 {
 };
 
 template <int val>
 struct print_val<value_type<int, val> >
 {
-	print_int<val> text;
+	print_int<val, val < 0> text;
 };
 
 #define PRINT_STRING(_str) \
@@ -107,9 +121,9 @@ struct print_val<cons<CAR, CDR> >:
 template <typename T>
 struct printable
 {
-	inline operator char *()
+	operator const char *() const
 	{
-		return (char *)(T*)this;
+		return (const char *)(T*)this;
 	}
 };
 
@@ -123,7 +137,13 @@ struct terminate:
 template <typename VAL>
 struct print:
 	public terminate<print_val<VAL> >
-{};
+{
+    print(VAL = VAL()) {}
+};
+
+template<typename T> std::ostream& operator<<(std::ostream& os, print<T> p) {
+    return os << (const char*)p;
+}
 
 extern const char print_nil_text[]="nil";
 struct print_nil
@@ -136,6 +156,7 @@ struct print_val<nil>:
 	public print_nil
 {};
 
+// TODO Quotes around printed strings
 template <>
 struct print_val<string<> >
 {};

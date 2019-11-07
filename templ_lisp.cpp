@@ -1,4 +1,5 @@
 #include "lisp.h"
+#include "parse.h"
 #include <stdio.h>
 
 typedef env_<heap<>,nil> really_empty_env;
@@ -25,5 +26,5 @@ int main()
 {
 	typedef eval<prog, initial_env> eval_result;
 	print_env<eval_result::env, eval_result::value> printed;
-	puts((char*)printed);
+	puts(printed);
 }
