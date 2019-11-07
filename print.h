@@ -5,183 +5,88 @@
 
 namespace {
 
-/**************************************************************
-Value Printers */
-template <typename T>
-struct print_val;
-
-template <char val>
-struct print_val<value_type<char, val> >
-{
-	char text;
-	
-	inline print_val()
-	{
-		text=val;
-	}
+template<typename T, bool term = true> struct to_data;
+template<char... STR> struct to_data<string<STR...>, true> {
+    static constexpr char array[] = { STR..., '\0' };
+};
+template<char... STR> struct to_data<string<STR...>, false> {
+    static constexpr char array[] = { STR... };
 };
 
-/**************************************************************
-Integer Printer */
-template <int val, bool sign = false>
-struct print_int;
-
-template <bool sign> struct print_sign;
-template <> struct print_sign<true>: print_val<value_type<char, '-'>> {};
-
-template <int val>
-struct print_int_prefix
-{
-	print_int<val, false> prt;
+template<typename... T> struct concat;
+template<typename... T> using concat_t = typename concat<T...>::type;
+template<> struct concat<string<>> {
+    using type = string<>;
+};
+template<typename T> struct concat<T> {
+    using type = T;
+};
+template<char... T, char... U> struct concat<string<T...>, string<U...>> {
+    using type = string<T..., U...>;
+};
+template<typename T, typename U, typename... V> struct concat<T, U, V...> {
+    using type = concat_t<concat_t<T, U>, concat_t<V...>>;
 };
 
-template <>
-struct print_int_prefix<0>
-{};
+// repr = true to include quotes and such to make a roundtrip possible.
+template<typename T, bool repr = false> struct print;
+template<typename T, bool repr = false> using print_t = typename print<T, repr>::type;
+template<typename T, bool repr = false> const char *printed = to_data<print_t<T, repr>>::array;
 
-template <int digit>
-struct print_digit:
-	print_val<value_type<char, '0'+digit> >
-{};
+template<typename T, bool repr> struct print_cons;
+template<typename T, bool repr> using print_cons_t = typename print_cons<T, repr>::type;
 
-template <int val, bool sign>
-struct print_int:
-	print_int_prefix<val / 10>,
-	print_digit<val%10>
-{
+template<int val, bool negative> struct print_int;
+template<int val, bool negative> using print_int_t = typename print_int<val, negative>::type;
+
+template<> struct print<nil> { using type = decltype("nil"_str); };
+
+template<typename CAR, typename CDR, bool repr> struct print<cons<CAR, CDR>, repr> {
+    using type = concat_t<string<'('>, print_cons_t<cons<CAR, CDR>, repr>, string<')'>>; };
+
+
+template<char... C> struct print<string<C...>> { using type = string<C...>; };
+template<char... C> struct print<string<C...>, true> { using type = concat_t<string<'"'>, string<C...>, string<'"'>>; };
+
+template<char... C, bool R> struct print<symbol<C...>, R> { using type = string<C...>; };
+template<char C> struct print<value_type<char, C>> { using type = string<C>; };
+template<char C> struct print<value_type<char, C>, true> { using type = concat_t<string<'\''>, string<C>, string<'\''>>; };
+
+template<int val, bool R> struct print<value_type<int, val>, R> { using type = print_int_t<val, val < 0>; };
+
+template<typename ARGS, typename BODY, typename ENV> struct print<lambda<ARGS, BODY, ENV>> {
+    using type = decltype("<procedure>"_str);
 };
 
-template <int val>
-struct print_int<val, true>:
-	print_sign<true>,
-	print_int_prefix<-val / 10>,
-	print_digit<-val%10>
-{
+//template<typename T, bool repr> struct print { using type = decltype("UNIMPL"_str); };
+
+/*********************************************************** List Printer */
+
+// Perhaps repr should always be true when printing something inside a list? (And when is repr false?)
+template<typename CAR, typename CDR, bool repr> struct print_cons<cons<CAR, CDR>, repr> {
+    using type = concat_t<print_t<CAR, repr>, string<' '>, print_cons_t<CDR, repr>>; };
+
+template<typename CAR, bool repr> struct print_cons<cons<CAR, nil>, repr> {
+    using type = print_t<CAR, repr>; };
+
+// Dotted pair, a cdr is a non-cons
+template<typename T, bool repr> struct print_cons {
+    using type = concat_t<string<'.', ' '>, print_t<T, repr>>; };
+
+/*********************************************************** Integer Printer */
+
+template<int val> struct print_int_prefix { using type = print_int_t<val, false>; };
+template<> struct print_int_prefix<0> { using type = string<>; };
+template<int val> using print_int_prefix_t = typename print_int_prefix<val>::type;
+
+template<int digit> using print_digit_t = string<'0' + digit>;
+
+template<int val, bool negative> struct print_int {
+    using type = concat_t<print_int_prefix_t<val / 10>, print_digit_t<val % 10>>;
 };
 
-template <int val>
-struct print_val<value_type<int, val> >
-{
-	print_int<val, val < 0> text;
+template<int val> struct print_int<val, true> {
+    using type = concat_t<string<'-'>, print_int_prefix_t<-val / 10>, print_digit_t<-val % 10>>;
 };
-
-#define PRINT_STRING(_str) \
-	print_string<sizeof(_str)-1, _str>
-template <int strlen, const char *str>
-struct print_string
-{
-	char text[strlen];
-	
-	inline print_string()
-	{
-		memcpy(text, str, strlen);
-	}
-};
-
-/******************************************************
-Cons Printer */
-template <typename VAL>
-struct print_cons;
-
-extern const char print_list_sep[]=" ";
-template <typename CAR, typename CDR>
-struct print_cons<cons<CAR, CDR> >
-{
-	print_val<CAR> b;
-	PRINT_STRING(print_list_sep) c;
-	print_cons<CDR> d;
-};
-
-template <typename CAR>
-struct print_cons<cons<CAR, nil> >
-{
-	print_val<CAR> b;
-};
-
-/*
-	Dotted pair, a cdr is a non-cons
-*/
-extern const char print_cons_sep[]=". ";
-template <typename VAL>
-struct print_cons
-{
-	PRINT_STRING(print_cons_sep) a;
-	print_val<VAL> b;
-};
-
-extern const char print_list_beg[]="(";
-extern const char print_list_end[]=")";
-template <typename CAR, typename CDR>
-struct print_val<cons<CAR, CDR> >:
-	public PRINT_STRING(print_list_beg),
-	public print_cons<cons<CAR, CDR> >,
-	public PRINT_STRING(print_list_end)
-{};
-
-template <typename T>
-struct printable
-{
-	operator const char *() const
-	{
-		return (const char *)(T*)this;
-	}
-};
-
-template <typename printer>
-struct terminate:
-	public printer,
-	public print_val<value_type<char, 0> >,
-	public printable<terminate<printer> >
-{};
-
-template <typename VAL>
-struct print:
-	public terminate<print_val<VAL> >
-{
-    print(VAL = VAL()) {}
-};
-
-template<typename T> std::ostream& operator<<(std::ostream& os, print<T> p) {
-    return os << (const char*)p;
-}
-
-extern const char print_nil_text[]="nil";
-struct print_nil
-{
-	PRINT_STRING(print_nil_text) text;
-};
-
-template <>
-struct print_val<nil>:
-	public print_nil
-{};
-
-// TODO Quotes around printed strings
-template <>
-struct print_val<string<> >
-{};
-template <char c, char... s>
-struct print_val<string<c,s...> >:
-	print_val<value_type<char,c> >,
-	print_val<string<s...> >
-{};
-
-template <char c, char... cs>
-struct print_val<symbol<c, cs...> >:
-	print_val<value_type<char, c> >,
-	print_val<symbol<cs...> >
-{};
-template <>
-struct print_val<symbol<> >
-{};
-
-extern const char print_lambda[]="<procedure>";
-template <typename ARGS, typename BODY, typename ENV>
-struct print_val<lambda<ARGS, BODY, ENV> >:
-	PRINT_STRING(print_lambda)
-{};
-
-template <int p>
-struct print_val<ptr<p>>: print_val<value_type<char,'#'>>,print_int<p> {};
 
 }

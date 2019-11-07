@@ -62,24 +62,22 @@ struct alloc<heap<Xs...>, V>
 // eventually want a nicer formatting template that dereferences pointers once,
 // keeps track of printed values and prints back references for other things.
 // (e.g. ptr<0> on heap<cons<ptr<0>, ptr<0>>>)
-template <typename ENV, typename V> struct deepeek { typedef V value; };
-template <typename ENV, typename V> using deepeek_t = typename deepeek<ENV, V>::value;
+template <typename ENV, typename V> struct deep_peek { typedef V value; };
+template <typename ENV, typename V> using deep_peek_t = typename deep_peek<ENV, V>::value;
 
 template <typename ENV, int p>
-struct deepeek<ENV,ptr<p>>
+struct deep_peek<ENV,ptr<p>>
 {
 	typedef peek_t<ENV, ptr<p>> val1;
-	typedef deepeek_t<ENV, val1> value;
+	typedef deep_peek_t<ENV, val1> value;
 };
 
 template <typename ENV, typename CAR, typename CDR>
-struct deepeek<ENV,cons<CAR,CDR>>
+struct deep_peek<ENV,cons<CAR,CDR>>
 {
-	typedef deepeek_t<ENV, CAR> car;
-	typedef deepeek_t<ENV, CDR> cdr;
+	typedef deep_peek_t<ENV, CAR> car;
+	typedef deep_peek_t<ENV, CDR> cdr;
 	typedef cons<car,cdr> value;
 };
-
-template <typename ENV, typename V> using print_env = print<deepeek_t<ENV, V>>;
 
 }

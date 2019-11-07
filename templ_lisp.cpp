@@ -24,7 +24,7 @@ PROG
 
 int main()
 {
-	typedef eval<prog, initial_env> eval_result;
-	print_env<eval_result::env, eval_result::value> printed;
-	puts(printed);
+    using eval_result = eval<prog, initial_env>;
+    using final_value = deep_peek_t<eval_result::env, eval_result::value>;
+    puts(printed<final_value>);
 }
