@@ -8,8 +8,7 @@
 #ifdef COMPILER
 #include <set>
 #endif
-
-namespace {
+#include <variant>
 
 enum obtype
 {
@@ -27,29 +26,47 @@ typedef struct ob_ *ob;
 const int NUMINLINEP = 2;
 struct ob_
 {
-	// Lazy: some things have irregular alignment so there aren't tag bits.
-	// Just doing the simplest thing here :)
-	obtype tag;
-	union
-	{
-		void *ptr;
-		void *ptrs[NUMINLINEP];
-		ob ob0;
-		ob obs[NUMINLINEP];
-		const char* sym;
-		const char* str;
-		int val;
-		struct
-		{
-			ob car;
-			ob cdr;
-		};
-		struct
-		{
-			ob (*proc)(ob env, ob args);
-			ob env;
-		};
-	};
+    constexpr ob_(std::nullptr_t = nullptr): tag(otnil), ptr(nullptr) {}
+
+    constexpr ob_(obtype type, ob ob0): tag(type), ob0(ob0) {
+    }
+
+    constexpr ob_(obtype type, ob ob0, ob ob1): tag(type), obs{ob0, ob1} {
+    }
+
+    constexpr ob_(obtype type, const char* s): tag(type), str(s) {
+        assert(type == otsymbol || type == otstring);
+    }
+
+    constexpr ob_(int val): tag(otint), val(val) {
+    }
+
+    constexpr ob_(ob (*proc)(ob env, ob args), ob env): tag(otproc), proc(proc), env(env) {
+    }
+
+    // Lazy: some things have irregular alignment so there aren't tag bits.
+    // Just doing the simplest thing here :)
+    obtype tag;
+    union
+    {
+        void *ptr;
+        void *ptrs[NUMINLINEP];
+        ob ob0;
+        ob obs[NUMINLINEP];
+        const char* sym;
+        const char* str;
+        int val;
+        struct
+        {
+            ob car;
+            ob cdr;
+        };
+        struct
+        {
+            ob (*proc)(ob env, ob args);
+            ob env;
+        };
+    };
 };
 
 static bool eqsym(ob o, const char* sym)
@@ -229,5 +246,3 @@ void rtsAddBinding(ob env, ob binding)
 {
 	env->car = obnew(otcons, 2, binding, env->car);
 }
-
-} // namespace

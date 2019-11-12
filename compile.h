@@ -4,7 +4,9 @@
 namespace {
 
 template<ob proc(ob env, ob args)> struct prim {};
-template<ob proc(ob env, ob args)> struct reify<prim<proc>> { static ob value() { return obnew(otproc, 2, proc, NULL); } };
+template<ob proc(ob env, ob args)> struct reify<prim<proc>> {
+    static constexpr auto val = ob_(proc, nullptr);
+    static constexpr ob value() { return (ob)&val; } };
 
 ob prim_CAR(ob, ob args)
 {
