@@ -119,8 +119,8 @@ def to_string(s):
 
 # TODO Build an argument list instead so we don't have to mess with quoting,
 # and add optional filtering separately.
-clang = "clang++ -Os -g -std=c++17 -Wno-gnu-string-literal-operator-template -c -o %s %s %s 2>&1"
-gcc = "g++ -Os -g -fmessage-length=0 -ftemplate-depth-1000 -std=c++17 -Wall -Wno-unused-variable -Wno-unused-function -c -o %s %s %s 2>&1" # | ./filter.sh"
+clang = "clang++ -Os -std=c++17 -DNDEBUG -Wno-gnu-string-literal-operator-template -c -o %s %s %s 2>&1"
+gcc = "g++ -Os -DNDEBUG -fmessage-length=0 -ftemplate-depth-1000 -std=c++17 -Wall -Wno-unused-variable -Wno-unused-function -c -o %s %s %s 2>&1" # | ./filter.sh"
 
 def mktemp():
     import tempfile
