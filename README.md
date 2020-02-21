@@ -6,6 +6,17 @@ evaluated into new template types, or compiled into C++ code with a minimal
 
 The compiler does not do any optimizations yet.
 
+The interpreter is probably the most interesting as that interprets a program
+and produces an output string at compile time - the compiled output is only a
+call to `puts()` with a constant string. Ironically the compiler ends up a bit
+more boring - it's your typical application of templates to generate C++ code,
+and doesn't even evaluate anything until runtime.
+
+## Samples
+
+See `example_compile.cpp` and `example_interpret.cpp` for a simple
+stand-alone demonstration without using the helper or test scripts.
+
 ## Dealing with error messages
 
 Template errors are notoriously difficult to read. To translate the template

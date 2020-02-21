@@ -179,7 +179,7 @@ ob prim_ABORT(ob, ob)
 }
 
 template <typename T>
-ob eval(const T&)
+ob eval(const T& = T())
 {
 #define reg_prim(p) \
 	cons<p, prim<prim_##p> >

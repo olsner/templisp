@@ -69,6 +69,8 @@ struct ob_
     };
 };
 
+namespace {
+
 static bool eqsym(ob o, const char* sym)
 {
 	return o->tag == otsymbol && o->sym == sym;
@@ -245,4 +247,6 @@ void rtsSetBinding(ob env, ob sym, ob value)
 void rtsAddBinding(ob env, ob binding)
 {
 	env->car = obnew(otcons, 2, binding, env->car);
+}
+
 }
