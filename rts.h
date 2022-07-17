@@ -23,7 +23,7 @@ enum obtype
 
 typedef struct ob_ *ob;
 
-const int NUMINLINEP = 2;
+const int NUMINLINEP = 3;
 struct ob_
 {
     constexpr ob_(std::nullptr_t = nullptr): tag(otnil), ptr(nullptr) {}
@@ -78,7 +78,7 @@ static bool eqsym(ob o, const char* sym)
 
 struct less_sym
 {
-	bool operator()(ob a, ob b)
+	bool operator()(ob a, ob b) const
 	{
 		assert(a->tag == otsymbol && b->tag == otsymbol);
 		return a != b && strcmp(a->sym, b->sym) < 0;
