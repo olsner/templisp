@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import argparse
 import os
@@ -153,14 +153,14 @@ def run(args, progtype, progstring):
         temp = None
     cmd = args.compiler % (out + ".o", quote("-DPROG=" + prog), args.shell)
     if args.verbose:
-        print "program string:", progstring
-        print "program type (Python parsed):", progtype
-        print "program typedef:", prog
-        print "compiler cmdline:" , cmd
+        print("program string:", progstring)
+        print("program type (Python parsed):", progtype)
+        print("program typedef:", prog)
+        print("compiler cmdline:" , cmd)
     try:
         r = os.system(cmd)
         if r:
-            print >>sys.stderr, "Compilation failed :("
+            print("Compilation failed :(", file=sys.stderr)
             return r
         link(args, out)
         if args.compile_only:
@@ -173,7 +173,7 @@ def run(args, progtype, progstring):
             os.unlink(temp + ".o")
 
 def justPrint(args, prog, progstring):
-    print prog
+    print(prog)
 
 parser = argparse.ArgumentParser(description="Translate S-expressions to templates and display or compile/interpret using a C++ compiler.")
 parser.add_argument('expressions', metavar='SEXP', type=str, nargs='+',
