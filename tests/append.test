@@ -1,11 +1,12 @@
 ./runlisp.py '(progn (define (append a b) (if (null? a) b (cons (car a) (append (cdr a) b)))) append)'
->>>
-<procedure>
+>>> /<procedure>/
+>>>2
 >>>= 0
 
 ./runlisp.py "(progn (define (append a b) (if (null? a) b (cons (car a) (append (cdr a) b)))) '())"
 >>>
 nil
+>>>2
 >>>= 0
 
 ./runlisp.py '(progn (define (append a b) (if (null? a) b (cons (car a) (append (cdr a) b)))) (append (quote (a)) (quote (b c d))))'
